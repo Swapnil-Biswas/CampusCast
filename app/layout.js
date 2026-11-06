@@ -1,10 +1,10 @@
-import { Fraunces, Schibsted_Grotesk, Caveat } from "next/font/google";
+import { Archivo_Black, Schibsted_Grotesk, DM_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Fraunces({
+// Heavy display face: clean contours, so hollow (outlined) text renders crisply.
+const display = Archivo_Black({
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["opsz"],
+  weight: "400",
   variable: "--font-display",
   display: "swap",
 });
@@ -15,11 +15,11 @@ const body = Schibsted_Grotesk({
   display: "swap",
 });
 
-// handwriting used on the sticky notes
-const hand = Caveat({
+// small labels, tags and numbers
+const mono = DM_Mono({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-hand",
+  weight: ["400", "500"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -31,7 +31,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${hand.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
       </head>

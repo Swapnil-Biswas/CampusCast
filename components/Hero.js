@@ -12,7 +12,7 @@ export default function Hero() {
         <div data-reveal>
           <p className="eyebrow">Issue no. 1 · For every campus</p>
           <h1 className="display">
-            Never miss<br />what <em>matters</em><br />on campus.
+            Never miss<br />what<br /><em>matters</em><br />on campus.
           </h1>
           <p className="sub">
             CampusCast is one feed for every notice, exam change, hackathon and workshop,
