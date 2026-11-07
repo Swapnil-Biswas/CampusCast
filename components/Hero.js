@@ -1,4 +1,5 @@
 import { ArrowRight, Play } from "lucide-react";
+import HeroVideo from "./HeroVideo";
 
 // Drop your video into /public and put its path here, e.g. "/campus-video.mp4".
 // While this is empty, a placeholder frame is shown instead.
@@ -27,7 +28,7 @@ export default function Hero() {
 
         <div className="video-wrap" data-reveal>
           {VIDEO_SRC ? (
-            <video src={VIDEO_SRC} poster={VIDEO_POSTER || undefined} autoPlay muted loop controls playsInline preload="auto" />
+            <HeroVideo src={VIDEO_SRC} poster={VIDEO_POSTER} />
           ) : (
             <div className="video-ph" role="img" aria-label="Video placeholder">
               <div>
@@ -37,7 +38,6 @@ export default function Hero() {
               </div>
             </div>
           )}
-          <span className="video-cap">CampusCast in motion</span>
           <div className="mini m1"><small>P0 · NOW</small>DBMS internal moved to Tue!</div>
           <div className="mini m2"><small>P1 · TODAY</small>Hackathon closes tonight</div>
         </div>
