@@ -2,8 +2,8 @@ import { ArrowRight, Play } from "lucide-react";
 
 // Drop your video into /public and put its path here, e.g. "/campus-video.mp4".
 // While this is empty, a placeholder frame is shown instead.
-const VIDEO_SRC = "";
-const VIDEO_POSTER = ""; // optional, e.g. "/campus-video-poster.jpg"
+const VIDEO_SRC = "/campus-video.mp4";
+const VIDEO_POSTER = "/campus-video-poster.jpg";
 
 export default function Hero() {
   return (
@@ -27,7 +27,7 @@ export default function Hero() {
 
         <div className="video-wrap" data-reveal>
           {VIDEO_SRC ? (
-            <video src={VIDEO_SRC} poster={VIDEO_POSTER || undefined} controls playsInline preload="metadata" />
+            <video src={VIDEO_SRC} poster={VIDEO_POSTER || undefined} autoPlay muted loop controls playsInline preload="auto" />
           ) : (
             <div className="video-ph" role="img" aria-label="Video placeholder">
               <div>
@@ -37,7 +37,7 @@ export default function Hero() {
               </div>
             </div>
           )}
-          <span className="video-cap">CampusCast in 60 seconds</span>
+          <span className="video-cap">CampusCast in motion</span>
           <div className="mini m1"><small>P0 · NOW</small>DBMS internal moved to Tue!</div>
           <div className="mini m2"><small>P1 · TODAY</small>Hackathon closes tonight</div>
         </div>

@@ -1,5 +1,6 @@
 import Nav from "../components/Nav";
 import Hero from "../components/Hero";
+import NoticePad from "../components/NoticePad";
 import Problem from "../components/Problem";
 import Flow from "../components/Flow";
 import FilterDemo from "../components/FilterDemo";
@@ -18,6 +19,7 @@ export default function Page() {
       <Nav />
       <main>
         <Hero />
+        <NoticePad />
         <Problem />
         <Flow />
         <FilterDemo />
