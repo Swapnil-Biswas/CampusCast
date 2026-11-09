@@ -4,13 +4,21 @@
 
 Students miss important updates because information is scattered across WhatsApp groups, notice boards and email. CampusCast is a single platform that filters every announcement by **department, year, club and urgency**, and bundles the student-life tools that usually live in separate chats.
 
-This repository contains the CampusCast landing page.
+This repository contains the CampusCast landing page: a scroll-driven 3D classroom followed by the product sections.
 
-## What the page covers
+## The scroll story
 
-- **The problem and the idea:** why notices get lost, and how "publish once, reach the right students" works
-- **Live filter demo:** pick a department, year and clubs and watch the notices that are not yours fade out
-- **Urgency system:** P0 (critical) to P3 (FYI), and how loudly each one notifies
+The page opens in a real-time 3D lecture room. The students and professor keep moving on their own, and the camera travels through the room as you scroll:
+
+1. **Class is in session:** a lecture is under way.
+2. **Everyone listens:** the camera moves down the aisle.
+3. **The notice gets buried:** dozens of notices swirl around the pinboard and students check their phones.
+4. **One feed:** the notices stream into the board, which becomes the CampusCast feed.
+5. **The right students:** phones light up and only the students a notice is for raise a hand.
+
+## What else the page covers
+
+- **Campus in motion:** a video that grows to fill the screen
 - **Nine sections**
   - Hackathon
   - Department Notifications
@@ -21,20 +29,35 @@ This repository contains the CampusCast landing page.
   - Notes & Previous Papers
   - CampusXchange (seniors sell old stuff to juniors)
   - Free Mentorship
-- **Trust and safety, roadmap and six-month targets**, plus an early-access signup form
+- **How it works:** publish once, reach the right students
+- **Live filter demo:** pick a department, year and clubs and see which notices are yours
+- **Urgency system:** Now, Today, Soon and FYI, and how loudly each one notifies
+- **The engine, trust and safety**, plus an early-access signup form
 
-## Design
+## Quality levels
 
-A campus notice-board look: crumpled beige paper background, sticky-note cards with tape and pins, handwritten note titles and highlighter-style emphasis. The only animation is a soft fade-in as sections scroll into view.
+The 3D scene adapts to the device, and steps down further if the frame rate drops.
 
-Fonts: Fraunces (headings), Schibsted Grotesk (body) and Caveat (handwriting), loaded with `next/font`.
+| Level | Used on | What you get |
+|---|---|---|
+| High | Dedicated GPUs | Full models, scanned room, 4K shadows, ambient occlusion |
+| Medium | Other desktops and laptops | Full models, scanned room, 2K shadows |
+| Low | Phones and low-end devices | Lighter models and room, no real-time shadows |
+| Plain | No WebGL2, reduced motion, data saver, 2G, very low memory | Text-only story, no 3D |
+
+Add `?q=high`, `?q=mid` or `?q=low` to the URL to force a 3D level while testing.
+
+On laptops with two GPUs, the browser must be set to use the dedicated one in the operating system's graphics settings.
 
 ## Tech stack
 
 - Next.js (App Router) and React
-- GSAP with ScrollTrigger for the scroll fade-in
+- three.js with React Three Fiber for the classroom
+- GSAP with ScrollTrigger and ScrollToPlugin for scroll animation and smooth scrolling
 - lucide-react for icons
 - Plain CSS, no UI framework
+
+Fonts: Bricolage Grotesque, Instrument Sans and DM Mono, loaded with `next/font`.
 
 ## Getting started
 
@@ -54,21 +77,23 @@ npm run build
 npm start
 ```
 
-## Adding your video
-
-The hero shows a video placeholder. To use your own video:
-
-1. Put the file in `public/`, for example `public/campus-video.mp4`.
-2. In `components/Hero.js`, set `VIDEO_SRC = "/campus-video.mp4"` (and optionally `VIDEO_POSTER`).
-
 ## Project structure
 
 ```
-app/            layout, global styles, page
-components/     one file per page section
-lib/data.js     all page copy and demo data
-public/         paper texture and static assets
+app/                     layout, global styles, page
+components/story/        the 3D classroom, scroll chapters and camera
+components/sections/     the page sections after the story
+lib/data.js              page copy and demo data
+lib/chapters.js          scroll ranges of the story chapters
+public/people/           character models and animations (public/people/lo/ for low-end devices)
+public/textures/         room materials
+public/campus-video.mp4  campus video
 ```
+
+## Credits
+
+- Characters and animations: [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT licence (see `public/people/LICENSE-Rocketbox.txt`)
+- Room materials: [Poly Haven](https://polyhaven.com), CC0
 
 ## Notes
 
