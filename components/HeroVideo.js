@@ -15,7 +15,10 @@ export default function HeroVideo({ src, poster }) {
     v.addEventListener("loadeddata", play);
     const vis = () => { if (!document.hidden) play(); };
     document.addEventListener("visibilitychange", vis);
-    return () => { v.removeEventListener("loadeddata", play); document.removeEventListener("visibilitychange", vis); };
+    // only decode while it is on screen
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) play(); else v.pause(); });
+    io.observe(v);
+    return () => { io.disconnect(); v.removeEventListener("loadeddata", play); document.removeEventListener("visibilitychange", vis); };
   }, []);
   return (
     <video
@@ -26,7 +29,7 @@ export default function HeroVideo({ src, poster }) {
       muted
       loop
       playsInline
-      preload="auto"
+      preload="metadata"
       disablePictureInPicture
       disableRemotePlayback
       controlsList="nodownload noplaybackrate noremoteplayback"

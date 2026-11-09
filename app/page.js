@@ -1,17 +1,13 @@
 import Nav from "../components/Nav";
-import Hero from "../components/Hero";
-import NoticePad from "../components/NoticePad";
-import Problem from "../components/Problem";
-import Flow from "../components/Flow";
-import FilterDemo from "../components/FilterDemo";
-import Urgency from "../components/Urgency";
-import Features from "../components/Features";
-import Engine from "../components/Engine";
-import Trust from "../components/Trust";
-import Roadmap from "../components/Roadmap";
-import Stats from "../components/Stats";
-import CTA from "../components/CTA";
-import Animations from "../components/Animations";
+import Story from "../components/story/Story";
+import VideoReel from "../components/sections/VideoReel";
+import Modules from "../components/sections/Modules";
+import How from "../components/sections/How";
+import Filters from "../components/sections/Filters";
+import Urgency from "../components/sections/Urgency";
+import Platform from "../components/sections/Platform";
+import Join from "../components/sections/Join";
+import Motion from "../components/sections/Motion";
 import SmoothScroll from "../components/SmoothScroll";
 
 export default function Page() {
@@ -19,20 +15,16 @@ export default function Page() {
     <>
       <Nav />
       <main>
-        <Hero />
-        <NoticePad />
-        <Problem />
-        <Flow />
-        <FilterDemo />
+        <Story />
+        <VideoReel />
+        <Modules />
+        <How />
+        <Filters />
         <Urgency />
-        <Features />
-        <Engine />
-        <Trust />
-        <Roadmap />
-        <Stats />
-        <CTA />
+        <Platform />
+        <Join />
       </main>
-      <Animations />
+      <Motion />
       <SmoothScroll />
     </>
   );
