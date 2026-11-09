@@ -93,7 +93,9 @@ public/campus-video.mp4  campus video
 ## Credits
 
 - Characters and animations: [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT licence (see `public/people/LICENSE-Rocketbox.txt`)
-- Room materials: [Poly Haven](https://polyhaven.com), CC0
+- Room materials: [Poly Haven](https://polyhaven.com), CC0 (see `public/textures/LICENSE-PolyHaven.txt`)
+
+Full details for all third-party work, including fonts and libraries, are in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Notes
 
