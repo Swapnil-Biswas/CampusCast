@@ -12,6 +12,7 @@ import Roadmap from "../components/Roadmap";
 import Stats from "../components/Stats";
 import CTA from "../components/CTA";
 import Animations from "../components/Animations";
+import SmoothScroll from "../components/SmoothScroll";
 
 export default function Page() {
   return (
@@ -32,6 +33,7 @@ export default function Page() {
         <CTA />
       </main>
       <Animations />
+      <SmoothScroll />
     </>
   );
 }
