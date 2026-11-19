@@ -205,8 +205,7 @@ create policy "View own ID card" on storage.objects
   for select to authenticated
   using (bucket_id = 'id-cards' and (storage.foldername(name))[1] = auth.uid()::text);
 
--- ===========
-=================================================
+-- ============================================================
 -- Reviewing students (for now, in the dashboard)
 -- ============================================================
 -- Table Editor > profiles: filter status = pending, open the ID card from

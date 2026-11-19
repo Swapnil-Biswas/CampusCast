@@ -54,6 +54,7 @@ On laptops with two GPUs, the browser must be set to use the dedicated one in th
 - Next.js (App Router) and React
 - three.js with React Three Fiber for the classroom
 - GSAP with ScrollTrigger and ScrollToPlugin for scroll animation and smooth scrolling
+- Supabase (Auth, Postgres and private Storage) for sign-up, sign-in and student verification
 - lucide-react for icons
 - Plain CSS, no UI framework
 
@@ -68,7 +69,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. The site runs without any keys; sign-in only works after the Supabase setup [below](#sign-up-and-sign-in-supabase).
 
 Production build:
 
@@ -85,6 +86,14 @@ components/story/        the 3D classroom, scroll chapters and camera
 components/sections/     the page sections after the story
 lib/data.js              page copy and demo data
 lib/chapters.js          scroll ranges of the story chapters
+app/auth/, app/signin/, app/signup/, app/forgot-password/, app/reset-password/, app/verify/
+                         sign-up, sign-in, password reset and ID verification pages
+components/auth/, components/verify/, components/AuthNav.js, components/SiteNav.js
+                         their forms and the sign-in area of the nav
+lib/college.js, lib/profile.js, lib/supabase/
+                         college email rules, profiles and the Supabase clients
+proxy.js                 refreshes the Supabase session cookie
+supabase/setup.sql       database setup, run once in the Supabase SQL Editor
 public/people/           character models and animations (public/people/lo/ for low-end devices)
 public/textures/         room materials
 public/campus-video.mp4  campus video
@@ -99,7 +108,9 @@ Full details for all third-party work, including fonts and libraries, are in [TH
 
 ## Notes
 
-- The early-access form is front-end only and does not store emails yet.
+- The early-access form on the home page sends the email on to the sign-up page; nothing is stored until the student creates an account.
+- With Supabase connected, the home page is rendered on request (it reads the signed-in user for the nav) instead of being a static file.
+- Student ID card photos are sensitive personal data. They are kept in a private bucket and are only visible to the student who uploaded them and to project admins in the Supabase dashboard.
 - The notices in the filter demo are sample data.
 
 ## Sign-up and sign-in (Supabase)
@@ -128,12 +139,3 @@ Accounts are handled by [Supabase Auth](https://supabase.com/docs/guides/auth). 
 Pages: `/signup` and `/signin`. By default Supabase emails a confirmation link before the first sign-in; turn off **Confirm email** under **Authentication > Providers > Email** to sign users in straight after sign-up.
 
 
-## Login files
-
-```
-app/auth/, app/signin/, app/signup/, app/forgot-password/, app/reset-password/, app/verify/   sign-up, sign-in, reset and verification pages
-components/auth/, components/verify/, components/AuthNav.js, components/SiteNav.js            their forms and the nav sign-in area
-lib/college.js, lib/profile.js, lib/supabase/                                              college email rules, profiles, Supabase clients
-proxy.js                                                                                    refreshes the Supabase session
-supabase/setup.sql                                                                          database setup (run once in Supabase)
-```

@@ -34,6 +34,8 @@ Loaded through `next/font/google`, all under the SIL Open Font License 1.1 (http
 | react-dom | 19.3.1 | MIT |
 | three | 0.187.0 | MIT |
 | @react-three/fiber | 9.8.2 | MIT |
+| @supabase/ssr | 0.12.7 | MIT |
+| @supabase/supabase-js | 2.119.1 | MIT |
 | lucide-react | 1.70.0 | ISC |
 | gsap | 3.15.1 | GSAP Standard "no charge" licence: https://gsap.com/standard-license |
 
