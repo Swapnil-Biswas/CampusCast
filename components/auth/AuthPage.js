@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Nav from "../Nav";
+import SiteNav from "../SiteNav";
 import AuthForm from "./AuthForm";
 import { createClient, getUser } from "../../lib/supabase/server";
 import { isSupabaseConfigured } from "../../lib/supabase/config";
@@ -9,7 +9,7 @@ import { homeFor } from "../../lib/profile";
 export function AuthShell({ eyebrow, title, sub, children }) {
   return (
     <>
-      <Nav />
+      <SiteNav />
       <main className="auth">
         <div className="container">
           <div className="auth-card">

@@ -1,48 +1,33 @@
-import Link from "next/link";
-import { BadgeCheck } from "lucide-react";
-import { createClient, getUser } from "../lib/supabase/server";
-import { getProfile } from "../lib/profile";
-import { signOut } from "../app/auth/actions";
+"use client";
+import { useEffect, useState } from "react";
 
-export default async function Nav() {
-  const user = await getUser();
-  let profile = null;
-  if (user) ({ profile } = await getProfile(await createClient(), user.id));
-  const name = (profile?.full_name || user?.user_metadata?.full_name)?.split(" ")[0] || user?.email;
-  const verified = profile?.status === "verified";
-
+// Floating glass nav: slides away while you scroll down through the story, returns when you scroll up.
+// `children` fills the right-hand slot (sign-in area on login-aware pages); by default it's the early-access link.
+export default function Nav({ children }) {
+  const [hide, setHide] = useState(false);
+  const [solid, setSolid] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const on = () => {
+      const y = window.scrollY;
+      setSolid(y > 60);
+      setHide(y > last + 4 && y > 200);
+      if (y < last - 4) setHide(false);
+      last = y;
+    };
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, []);
   return (
-    <header className="nav" id="nav">
-      <div className="container nav-in">
-        <Link href="/" className="logo">Campus<i>Cast</i></Link>
-        <nav className="nav-links" aria-label="Primary">
-          <Link href="/#how">How it works</Link>
-          <Link href="/#try">Try the filters</Link>
-          <Link href="/#features">Features</Link>
-          <Link href="/#roadmap">Roadmap</Link>
-        </nav>
-        {user ? (
-          <div className="nav-auth">
-            {verified ? (
-              <span className="nav-user" title={user.email}>
-                <BadgeCheck size={16} aria-label="Verified" /> {name}
-              </span>
-            ) : (
-              <Link href="/verify" className="nav-signin">
-                {profile?.status === "pending" ? "ID under review" : "Verify your ID"}
-              </Link>
-            )}
-            <form action={signOut}>
-              <button type="submit" className="pill-sm">Sign out</button>
-            </form>
-          </div>
-        ) : (
-          <div className="nav-auth">
-            <Link href="/signin" className="nav-signin">Sign in</Link>
-            <Link href="/signup" className="pill-sm">Sign up</Link>
-          </div>
-        )}
-      </div>
+    <header className={"nav" + (hide ? " hide" : "") + (solid ? " solid" : "")} id="nav">
+      <a href="#top" className="logo">Campus<i>Cast</i></a>
+      <nav className="nav-links" aria-label="Primary">
+        <a href="#modules">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#try">Try the filters</a>
+        <a href="#urgency">Urgency</a>
+      </nav>
+      {children ?? <a href="#join" className="nav-cta">Get early access</a>}
     </header>
   );
 }

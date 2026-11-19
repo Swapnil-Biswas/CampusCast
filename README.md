@@ -4,13 +4,21 @@
 
 Students miss important updates because information is scattered across WhatsApp groups, notice boards and email. CampusCast is a single platform that filters every announcement by **department, year, club and urgency**, and bundles the student-life tools that usually live in separate chats.
 
-This repository contains the CampusCast landing page.
+This repository contains the CampusCast landing page: a scroll-driven 3D classroom followed by the product sections.
 
-## What the page covers
+## The scroll story
 
-- **The problem and the idea:** why notices get lost, and how "publish once, reach the right students" works
-- **Live filter demo:** pick a department, year and clubs and watch the notices that are not yours fade out
-- **Urgency system:** P0 (critical) to P3 (FYI), and how loudly each one notifies
+The page opens in a real-time 3D lecture room. The students and professor keep moving on their own, and the camera travels through the room as you scroll:
+
+1. **Class is in session:** a lecture is under way.
+2. **Everyone listens:** the camera moves down the aisle.
+3. **The notice gets buried:** dozens of notices swirl around the pinboard and students check their phones.
+4. **One feed:** the notices stream into the board, which becomes the CampusCast feed.
+5. **The right students:** phones light up and only the students a notice is for raise a hand.
+
+## What else the page covers
+
+- **Campus in motion:** a video that grows to fill the screen
 - **Nine sections**
   - Hackathon
   - Department Notifications
@@ -21,21 +29,35 @@ This repository contains the CampusCast landing page.
   - Notes & Previous Papers
   - CampusXchange (seniors sell old stuff to juniors)
   - Free Mentorship
-- **Trust and safety, roadmap and six-month targets**, plus an early-access signup form
+- **How it works:** publish once, reach the right students
+- **Live filter demo:** pick a department, year and clubs and see which notices are yours
+- **Urgency system:** Now, Today, Soon and FYI, and how loudly each one notifies
+- **The engine, trust and safety**, plus an early-access signup form
 
-## Design
+## Quality levels
 
-A campus notice-board look: crumpled beige paper background, sticky-note cards with bold ink outlines, hard shadows, tape and pins, and hollow (outlined) lettering for emphasis. The only animation is a soft fade-in as sections scroll into view.
+The 3D scene adapts to the device, and steps down further if the frame rate drops.
 
-Fonts: Archivo Black (headings), Schibsted Grotesk (body) and DM Mono (labels, tags and numbers), loaded with `next/font`.
+| Level | Used on | What you get |
+|---|---|---|
+| High | Dedicated GPUs | Full models, scanned room, 4K shadows, ambient occlusion |
+| Medium | Other desktops and laptops | Full models, scanned room, 2K shadows |
+| Low | Phones and low-end devices | Lighter models and room, no real-time shadows |
+| Plain | No WebGL2, reduced motion, data saver, 2G, very low memory | Text-only story, no 3D |
+
+Add `?q=high`, `?q=mid` or `?q=low` to the URL to force a 3D level while testing.
+
+On laptops with two GPUs, the browser must be set to use the dedicated one in the operating system's graphics settings.
 
 ## Tech stack
 
 - Next.js (App Router) and React
-- GSAP with ScrollTrigger for the scroll fade-in
+- three.js with React Three Fiber for the classroom
+- GSAP with ScrollTrigger and ScrollToPlugin for scroll animation and smooth scrolling
 - lucide-react for icons
-- Supabase Auth (via `@supabase/ssr`) for sign-up and sign-in
 - Plain CSS, no UI framework
+
+Fonts: Bricolage Grotesque, Instrument Sans and DM Mono, loaded with `next/font`.
 
 ## Getting started
 
@@ -54,6 +76,31 @@ Production build:
 npm run build
 npm start
 ```
+
+## Project structure
+
+```
+app/                     layout, global styles, page
+components/story/        the 3D classroom, scroll chapters and camera
+components/sections/     the page sections after the story
+lib/data.js              page copy and demo data
+lib/chapters.js          scroll ranges of the story chapters
+public/people/           character models and animations (public/people/lo/ for low-end devices)
+public/textures/         room materials
+public/campus-video.mp4  campus video
+```
+
+## Credits
+
+- Characters and animations: [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox), MIT licence (see `public/people/LICENSE-Rocketbox.txt`)
+- Room materials: [Poly Haven](https://polyhaven.com), CC0 (see `public/textures/LICENSE-PolyHaven.txt`)
+
+Full details for all third-party work, including fonts and libraries, are in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+## Notes
+
+- The early-access form is front-end only and does not store emails yet.
+- The notices in the filter demo are sample data.
 
 ## Sign-up and sign-in (Supabase)
 
@@ -80,25 +127,13 @@ Accounts are handled by [Supabase Auth](https://supabase.com/docs/guides/auth). 
 
 Pages: `/signup` and `/signin`. By default Supabase emails a confirmation link before the first sign-in; turn off **Confirm email** under **Authentication > Providers > Email** to sign users in straight after sign-up.
 
-## Adding your video
 
-The hero shows a video placeholder. To use your own video:
-
-1. Put the file in `public/`, for example `public/campus-video.mp4`.
-2. In `components/Hero.js`, set `VIDEO_SRC = "/campus-video.mp4"` (and optionally `VIDEO_POSTER`).
-
-## Project structure
+## Login files
 
 ```
-app/            layout, global styles, page, /signin, /signup, auth actions
-components/     one file per page section, plus auth/ for the sign-in forms
-lib/data.js     all page copy and demo data
-lib/supabase/   Supabase client and config
-proxy.js        refreshes the Supabase session on each request
-public/         paper texture and static assets
+app/auth/, app/signin/, app/signup/, app/forgot-password/, app/reset-password/, app/verify/   sign-up, sign-in, reset and verification pages
+components/auth/, components/verify/, components/AuthNav.js, components/SiteNav.js            their forms and the nav sign-in area
+lib/college.js, lib/profile.js, lib/supabase/                                              college email rules, profiles, Supabase clients
+proxy.js                                                                                    refreshes the Supabase session
+supabase/setup.sql                                                                          database setup (run once in Supabase)
 ```
-
-## Notes
-
-- The early-access form at the bottom of the page opens sign-up with the email filled in.
-- The notices in the filter demo are sample data.

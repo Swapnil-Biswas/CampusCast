@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BadgeCheck, Clock } from "lucide-react";
-import Nav from "../../components/Nav";
+import SiteNav from "../../components/SiteNav";
 import VerifyForm from "../../components/verify/VerifyForm";
 import { createClient } from "../../lib/supabase/server";
 import { getProfile } from "../../lib/profile";
@@ -87,7 +87,7 @@ export default async function VerifyPage() {
 
   return (
     <>
-      <Nav />
+      <SiteNav />
       <main className="auth">
         <div className="container">
           <div className="auth-card verify-card">

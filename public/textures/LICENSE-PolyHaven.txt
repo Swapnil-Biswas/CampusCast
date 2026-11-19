@@ -1,0 +1,11 @@
+The material textures in this folder come from Poly Haven (https://polyhaven.com)
+and are released under CC0 1.0 Universal (public domain dedication).
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Licence page: https://polyhaven.com/license
+
+Assets used (resized and compressed to WebP):
+- wood_floor            https://polyhaven.com/a/wood_floor
+- walnut_veneer         https://polyhaven.com/a/walnut_veneer
+- oak_veneer_01         https://polyhaven.com/a/oak_veneer_01
+- painted_plaster_wall  https://polyhaven.com/a/painted_plaster_wall
