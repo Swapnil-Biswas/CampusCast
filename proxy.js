@@ -22,7 +22,7 @@ export async function proxy(request) {
   });
 
   try {
-    await supabase.auth.getUser();
+    await supabase.auth.getClaims();   // checks the token locally (and refreshes it when it expires): no network call on most requests
   } catch {
     // Supabase unreachable: carry on signed out rather than failing the page.
   }

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { BadgeCheck, Clock } from "lucide-react";
 import SiteNav from "../../components/SiteNav";
 import VerifyForm from "../../components/verify/VerifyForm";
-import { createClient } from "../../lib/supabase/server";
+import { createClient, getUser } from "../../lib/supabase/server";
 import { getProfile } from "../../lib/profile";
 import { isCollegeEmail, parseStudentEmail } from "../../lib/college";
 import { signOut } from "../auth/actions";
@@ -13,11 +13,10 @@ export const metadata = { title: "Verify your student ID · CampusCast" };
 export default async function VerifyPage() {
   const supabase = await createClient();
   if (!supabase) redirect("/signin");
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
   if (!user) redirect("/signin");
 
-  const { profile, setupMissing } = await getProfile(supabase, user.id);
-  const collegeEmail = await isCollegeEmail(supabase, user.email);
+  const [{ profile, setupMissing }, collegeEmail] = await Promise.all([getProfile(supabase, user.id), isCollegeEmail(supabase, user.email)]);
   const status = profile?.status ?? "unverified";
   const detected = parseStudentEmail(user.email);
 

@@ -14,7 +14,7 @@ export default function Join() {
           <p className="lede light">Be part of the pilot. Bring your department, your club, and your group chats.</p>
           {/* Plain GET form: carries the college email over to the sign-up page. */}
           <form className="join-form" action="/signup">
-            <input type="email" name="email" required placeholder="25ug1byai282@bmsit.in" aria-label="College email" />
+            <input type="email" name="email" required placeholder="college@bmsit.in" aria-label="College email" />
             <button className="btn btn-clay" type="submit" data-magnetic>Join the pilot <ArrowRight size={18} /></button>
           </form>
           <small className="fine">College emails only. No likes. No feed noise.</small>

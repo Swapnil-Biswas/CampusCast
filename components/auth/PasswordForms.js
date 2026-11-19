@@ -56,7 +56,7 @@ export function ForgotPasswordForm({ notice = "" }) {
       <label className="field">
         <span>College email</span>
         <input name="email" type="email" autoComplete="email" required
-          defaultValue={state?.email ?? ""} placeholder="25ug1byai282@bmsit.in" />
+          defaultValue={state?.email ?? ""} placeholder="college@bmsit.in" />
       </label>
       {message && <p className="form-msg" role="alert">{message}</p>}
       <button className="btn btn-primary" type="submit" disabled={pending}>

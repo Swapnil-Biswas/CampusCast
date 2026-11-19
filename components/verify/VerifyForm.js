@@ -54,7 +54,7 @@ function IdPhoto({ name, label, required }) {
   );
 }
 
-// `detected` comes from a student email like 25ug1byai282@bmsit.in (see parseStudentEmail).
+// `detected` comes from a student email like 25ug1bycs001@bmsit.in (see parseStudentEmail).
 export default function VerifyForm({ defaults, detected }) {
   const [state, action, pending] = useActionState(submitVerification, null);
   const v = state?.values ?? defaults;

@@ -28,7 +28,7 @@ export async function submitVerification(_prev, formData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
-  // Student emails like 25ug1byai282@bmsit.in fix the branch, batch and USN.
+  // Student emails like 25ug1bycs001@bmsit.in fix the branch, batch and USN.
   const fromEmail = parseStudentEmail(user.email);
   if (fromEmail?.branch) branch = fromEmail.branch;
 

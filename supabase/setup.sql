@@ -13,7 +13,7 @@ create table if not exists public.allowed_college_domains (
 );
 alter table public.allowed_college_domains enable row level security;
 
--- BMS Institute of Technology (student emails look like 25ug1byai282@bmsit.in).
+-- BMS Institute of Technology (student emails look like 25ug1bycs001@bmsit.in).
 insert into public.allowed_college_domains (domain) values ('bmsit.in') on conflict do nothing;
 
 -- True when the email belongs to a college:
@@ -84,7 +84,7 @@ create table if not exists public.profiles (
   reviewed_at timestamptz,
   created_at timestamptz not null default now()
 );
--- Read from the college email when it has the student format (e.g. 25ug1byai282@bmsit.in).
+-- Read from the college email when it has the student format (e.g. 25ug1bycs001@bmsit.in).
 alter table public.profiles add column if not exists batch smallint;  -- year joined, e.g. 2025
 alter table public.profiles add column if not exists usn text;        -- e.g. 1BY25AI282
 alter table public.profiles enable row level security;
