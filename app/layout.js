@@ -13,11 +13,15 @@ export const metadata = {
     "CampusCast is a smart campus announcement platform. Filter by department, year, club and urgency, and find hackathon teams, notes, mentors and more.",
 };
 
+// The `js` class hides [data-reveal] / [data-stagger] content until GSAP fades it in.
+// If the animation script hasn't started within 3s (failed or blocked), show everything.
+const revealScript = `(function(){var d=document.documentElement;d.classList.add('js');setTimeout(function(){if(!d.classList.contains('anim-ready'))d.classList.remove('js');},3000);})();`;
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+        <script dangerouslySetInnerHTML={{ __html: revealScript }} />
       </head>
       <body>{children}</body>
     </html>

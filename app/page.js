@@ -1,4 +1,4 @@
-import Nav from "../components/Nav";
+import SiteNav from "../components/SiteNav";
 import Story from "../components/story/Story";
 import VideoReel from "../components/sections/VideoReel";
 import Modules from "../components/sections/Modules";
@@ -13,7 +13,7 @@ import SmoothScroll from "../components/SmoothScroll";
 export default function Page() {
   return (
     <>
-      <Nav />
+      <SiteNav />
       <main>
         <Story />
         <VideoReel />

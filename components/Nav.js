@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 
 // Floating glass nav: slides away while you scroll down through the story, returns when you scroll up.
-export default function Nav() {
+// `children` fills the right-hand slot (sign-in area on login-aware pages); by default it's the early-access link.
+export default function Nav({ children }) {
   const [hide, setHide] = useState(false);
   const [solid, setSolid] = useState(false);
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function Nav() {
         <a href="#try">Try the filters</a>
         <a href="#urgency">Urgency</a>
       </nav>
-      <a href="#join" className="nav-cta">Get early access</a>
+      {children ?? <a href="#join" className="nav-cta">Get early access</a>}
     </header>
   );
 }
