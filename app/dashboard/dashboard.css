@@ -30,8 +30,8 @@
 .dash-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .dash-top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 10px 24px; background: rgba(246, 239, 224, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .dash-burger { display: none; }
-.dash-search { flex: 1; max-width: 560px; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 0 12px; }
-.dash-search input { flex: 1; border: 0; background: transparent; padding: 10px 0; font: inherit; color: inherit; min-width: 0; }
+.dash-search { flex: 1; min-width: 0; max-width: 560px; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 0 12px; }
+.dash-search input { flex: 1; width: 100%; border: 0; background: transparent; padding: 10px 0; font: inherit; color: inherit; min-width: 0; }
 .dash-search input:focus { outline: none; }
 .dash-search:focus-within { border-color: var(--clay); }
 .dash-main { padding: 24px; max-width: 1100px; width: 100%; margin: 0 auto; }
@@ -169,3 +169,8 @@
 .bubble { max-width: 80%; padding: 6px 10px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); align-self: flex-start; }
 .bubble.me { align-self: flex-end; background: var(--ink); color: var(--cream); }
 .bubble small { display: block; opacity: .65; font-size: 11px; }
+
+/* loading placeholders */
+.skel { border-radius: 14px; background: linear-gradient(90deg, rgba(0,0,0,.06), rgba(0,0,0,.12), rgba(0,0,0,.06)); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+@keyframes skel { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
