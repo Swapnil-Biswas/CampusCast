@@ -275,3 +275,43 @@ test("when the notice type is not stated it is inferred and flagged", () => {
   const m = run({ ...goodRaw({ noticeType: MISSING() }), timetable: [] });
   assert.equal(m.result.noticeType, "notification");
 });
+
+import { matchDepartment as matchDeptLong } from "../../lib/exams/normalize.js";
+const REAL = [
+  ["Computer Science & Engineering", "CSE"], ["AI & Machine Learning", "AI&ML"], ["Information Science & Engineering", "ISE"],
+  ["Computer Science & Business Systems", "CSBS"], ["AI & Data Science", "AI&DS"], ["Electronics & Communication Engineering", "ECE"],
+  ["Electrical & Electronics Engineering", "EEE"], ["Electronics & Telecommunication Engineering", "E&TC"], ["Mechanical Engineering", "MECH"], ["Civil Engineering", "CIVIL"],
+].map(([name, code]) => ({ name, code }));
+
+test("departments written out in full or in short form are matched to the configured names", () => {
+  const m = (t) => matchDeptLong(t, REAL);
+  assert.equal(m("Artificial Intelligence and Machine Learning"), "AI & Machine Learning");
+  assert.equal(m("Department of Artificial Intelligence & Machine Learning"), "AI & Machine Learning");
+  assert.equal(m("AIML"), "AI & Machine Learning");
+  assert.equal(m("Artificial Intelligence and Data Science"), "AI & Data Science");
+  assert.equal(m("Computer Science and Engineering"), "Computer Science & Engineering");
+  assert.equal(m("Dept. of CSE"), "Computer Science & Engineering");
+  assert.equal(m("Computer Science and Business Systems"), "Computer Science & Business Systems");
+  assert.equal(m("Information Science and Engineering"), "Information Science & Engineering");
+  assert.equal(m("Electronics and Communication Engineering"), "Electronics & Communication Engineering");
+  assert.equal(m("Electronics and Telecommunication Engineering"), "Electronics & Telecommunication Engineering");
+  assert.equal(m("Electrical and Electronics Engineering"), "Electrical & Electronics Engineering");
+  assert.equal(m("Mechanical"), "Mechanical Engineering");
+  assert.equal(m("Civil"), "Civil Engineering");
+});
+
+test("things that are not a configured department are not matched", () => {
+  const m = (t) => matchDeptLong(t, REAL);
+  assert.equal(m("Physics"), null);
+  assert.equal(m("Engineering"), null);
+  assert.equal(m(""), null);
+  assert.equal(m("Artificial Intelligence"), null);
+});
+
+test("an answer like 'Name (CODE)' is matched, but only when the name or code is really a department", () => {
+  const m = (t) => matchDeptLong(t, REAL);
+  assert.equal(m("AI & Machine Learning (AIML)"), "AI & Machine Learning");
+  assert.equal(m("Computer Science & Engineering (CSE)"), "Computer Science & Engineering");
+  assert.equal(m("Something Else (ECE)"), "Electronics & Communication Engineering");
+  assert.equal(m("Physics (PHY)"), null);
+});

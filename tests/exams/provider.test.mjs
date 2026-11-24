@@ -38,7 +38,8 @@ test("the request sends the PDF as a document and forces the structured tool", a
   assert.equal(doc.type, "document");
   assert.equal(doc.source.media_type, "application/pdf");
   assert.equal(doc.source.data, pdfBytes().toString("base64"));
-  assert.match(text.text, /AI & Machine Learning \(AI&ML\)/);     // configured departments are given to the model
+  assert.match(text.text, /- AI & Machine Learning
+/);     // configured department names are given to the model
   assert.deepEqual(out.input, goodRaw());
   assert.equal(out.model, "claude-sonnet-5-5");
 });
