@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
+import { NOT_CONFIGURED_MESSAGE } from "../../lib/supabase/config";
 import { BRANCHES, YEARS, parseStudentEmail } from "../../lib/college";
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -24,7 +25,7 @@ export async function submitVerification(_prev, formData) {
   const values = { fullName, branch, year: year || "" };
 
   const supabase = await createClient();
-  if (!supabase) return { error: "Sign-in isn't set up yet.", values };
+  if (!supabase) return { error: NOT_CONFIGURED_MESSAGE, values };
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 

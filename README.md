@@ -139,3 +139,25 @@ Accounts are handled by [Supabase Auth](https://supabase.com/docs/guides/auth). 
 Pages: `/signup` and `/signin`. By default Supabase emails a confirmation link before the first sign-in; turn off **Confirm email** under **Authentication > Providers > Email** to sign users in straight after sign-up.
 
 
+
+## The dashboard
+
+Signed-in, ID-verified students land on `/dashboard`. Everything is stored in Supabase and protected by row-level security, so a student can only see what their department, year and clubs entitle them to.
+
+| Area | What works |
+| --- | --- |
+| Home feed, Saved, Calendar | Notices ranked Now > Today > Soon > FYI, filters, search, read receipts, acknowledgement of Now notices, bookmarks, reminders, `.ics` download |
+| Official | Department circulars, exams (any change is re-announced as Now), workshops with seat cap, waitlist and CSV export, hackathons, cultural events and clubs |
+| Community | Connect (teammates), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
+| Admin | Publish notices (scheduled, expiring, audience preview), reach analytics, ID verification, moderation, people and roles, clubs, audit log |
+| Alerts | Live in-app bell, email for Now/Today notices and reminders, browser push, daily 7 am digest, quiet hours |
+
+### Setting it up on a new Supabase project
+
+Run the files in `supabase/` in order with `node scripts/db.mjs -f <file>` (the database password comes from the `PGPASSWORD` environment variable and is never stored): `setup.sql`, `dashboard-1-engine.sql` to `dashboard-4-community.sql`, then `PGPASSWORD=... node scripts/setup-alerts.mjs`, which applies `dashboard-5-alerts.sql`, stores the job secret and schedules the cron jobs (publish scheduled notices, send reminders, build digests, expire listings, call the dispatcher). `supabase/seed.sql` adds clearly labelled demo rows.
+
+Environment variables are listed in `.env.example`. `JOB_SECRET` must be identical in `.env.local`/Vercel and in the database (the setup script copies it). Email and push need `SMTP_*` and `VAPID_*` set; without them those alerts are skipped and the in-app bell still works.
+
+### Tests
+
+`node supabase/tests/stage1.mjs` (and `stage3`, `stage4`, `stage5`) run security checks inside a rolled-back transaction, impersonating different students. They never leave data behind.

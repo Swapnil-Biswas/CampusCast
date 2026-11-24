@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import SiteNav from "../SiteNav";
 import AuthForm from "./AuthForm";
 import { createClient, getUser } from "../../lib/supabase/server";
-import { isSupabaseConfigured } from "../../lib/supabase/config";
+import { isSupabaseConfigured, NOT_CONFIGURED_MESSAGE } from "../../lib/supabase/config";
 import { homeFor } from "../../lib/profile";
 
 // The sticky-note card every auth page sits in.
@@ -17,7 +17,7 @@ export function AuthShell({ eyebrow, title, sub, children }) {
             <h1 className="display">{title}</h1>
             {sub && <p className="auth-sub">{sub}</p>}
             {!isSupabaseConfigured && (
-              <p className="form-msg">Sign-in isn&apos;t set up yet. Add your Supabase keys to .env.local (see .env.example).</p>
+              <p className="form-msg">{NOT_CONFIGURED_MESSAGE}</p>
             )}
             {children}
           </div>

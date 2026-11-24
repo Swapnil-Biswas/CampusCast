@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
 import { isCollegeEmail, COLLEGE_EMAIL_ERROR } from "../../lib/college";
 import { homeFor } from "../../lib/profile";
+import { NOT_CONFIGURED_MESSAGE } from "../../lib/supabase/config";
 
-const NOT_CONFIGURED = "Sign-in isn't set up yet. Add your Supabase keys to .env.local.";
+const NOT_CONFIGURED = NOT_CONFIGURED_MESSAGE;
 
 function readCredentials(formData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();

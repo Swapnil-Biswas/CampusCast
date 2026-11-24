@@ -24,9 +24,9 @@ export default async function AuthNav() {
   return (
     <div className="nav-auth">
       {verified ? (
-        <span className="nav-user" title={user.email}>
-          <BadgeCheck size={16} aria-label="Verified" /> {name}
-        </span>
+        <Link href="/dashboard" className="nav-user" title={user.email}>
+          <BadgeCheck size={16} aria-label="Verified" /> {name} · Dashboard
+        </Link>
       ) : (
         <Link href="/verify" className="nav-signin">
           {profile?.status === "pending" ? "ID under review" : "Verify your ID"}

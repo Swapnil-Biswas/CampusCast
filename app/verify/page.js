@@ -44,7 +44,7 @@ export default async function VerifyPage() {
       <>
         <h1 className="display">You&apos;re <em>verified</em>.</h1>
         <p className="verify-badge"><BadgeCheck /> {profile.full_name} · {profile.usn ? `${profile.usn} · ` : ""} {profile.branch} · Year {profile.year}</p>
-        <Link href="/" className="btn btn-primary">Go to CampusCast</Link>
+        <Link href="/dashboard" className="btn btn-primary">Open your dashboard</Link>
       </>
     );
   } else if (status === "pending") {
