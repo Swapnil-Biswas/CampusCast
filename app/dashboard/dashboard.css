@@ -276,3 +276,15 @@
 .exam-guide { border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--card); }
 .exam-guide summary { font-weight: 600; cursor: pointer; }
 .exam-guide ul { margin: 8px 0 0; padding-left: 18px; }
+
+/* exam countdown */
+.exam-cd { background: var(--board); color: var(--cream); border-radius: 14px; padding: 12px 16px; display: grid; gap: 10px; }
+.exam-cd-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 14px; }
+.exam-cd-head small { margin-left: auto; opacity: .75; }
+.exam-cd-clock { display: flex; gap: 6px; flex-wrap: nowrap; align-items: stretch; }
+.exam-cd-box { position: relative; flex: 1 1 0; min-width: 0; max-width: 110px; text-align: center; background: rgba(255, 255, 255, .08); border-radius: 10px; padding: 8px 4px 6px; }
+.exam-cd-box b { display: block; font-family: var(--font-d); font-size: clamp(24px, 6vw, 38px); line-height: 1; color: var(--mustard); font-variant-numeric: tabular-nums; }
+.exam-cd-box span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 4px; }
+.exam-cd-box i { display: none; }
+.exam-cd.live { background: #2f7a4a; }
+.exam-cd-live { margin: 0; font-weight: 700; }

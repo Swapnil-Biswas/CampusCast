@@ -55,3 +55,50 @@ test("a notice is over only when every dated row is in the past", () => {
   assert.equal(isOver([{ exam_date: "2026-03-10" }, { exam_date: "2026-03-12" }], "2026-03-12"), false);
   assert.equal(isOver([], "2026-03-13"), false);
 });
+
+import { examInstant, nextExam, splitDuration, todayIST } from "../../lib/exams/student.js";
+
+test("exam times are read as India time, wherever the viewer is", () => {
+  assert.equal(examInstant("2026-03-10", "09:30:00"), Date.UTC(2026, 2, 10, 4, 0));   // 09:30 IST = 04:00 UTC
+  assert.equal(examInstant("2026-03-10", null), Date.UTC(2026, 2, 9, 18, 30));         // start of day IST
+  assert.equal(examInstant("nonsense", "09:30"), null);
+  assert.equal(examInstant(null, "09:30"), null);
+});
+
+test("a duration is split into days, hours, minutes and seconds, never below zero", () => {
+  assert.deepEqual(splitDuration(((2 * 24 + 3) * 3600 + 4 * 60 + 5) * 1000), { d: 2, h: 3, m: 4, s: 5 });
+  assert.deepEqual(splitDuration(59_999), { d: 0, h: 0, m: 0, s: 59 });
+  assert.deepEqual(splitDuration(-5000), { d: 0, h: 0, m: 0, s: 0 });
+});
+
+test("today is worked out in India time", () => {
+  assert.equal(todayIST(Date.UTC(2026, 2, 9, 19, 0)), "2026-03-10");   // 00:30 IST next day
+  assert.equal(todayIST(Date.UTC(2026, 2, 9, 12, 0)), "2026-03-09");
+});
+
+test("the next exam is the earliest one that has not finished", () => {
+  const rows = [
+    { id: "past", exam_date: "2026-03-01", start_time: "09:30", end_time: "11:00" },
+    { id: "later", exam_date: "2026-03-12", start_time: "09:30", end_time: "11:00" },
+    { id: "soon", exam_date: "2026-03-10", start_time: "14:00", end_time: "15:30" },
+    { id: "nodate", exam_date: null, start_time: "09:00" },
+  ];
+  const now = Date.UTC(2026, 2, 5, 0, 0);
+  assert.equal(nextExam(rows, now).row.id, "soon");
+  assert.equal(nextExam(rows, now).hasTime, true);
+  assert.equal(nextExam(rows, Date.UTC(2026, 2, 20)), null);
+});
+
+test("an exam in progress still counts as next until it ends", () => {
+  const rows = [{ id: "now", exam_date: "2026-03-10", start_time: "09:30", end_time: "11:00" }];
+  assert.equal(nextExam(rows, examInstant("2026-03-10", "10:00")).row.id, "now");
+  assert.equal(nextExam(rows, examInstant("2026-03-10", "11:00")), null);
+});
+
+test("a row with no time counts down to the start of its day and lasts that day", () => {
+  const rows = [{ id: "x", exam_date: "2026-03-10" }];
+  const n = nextExam(rows, examInstant("2026-03-09", "12:00"));
+  assert.equal(n.hasTime, false);
+  assert.equal(n.startsAt, examInstant("2026-03-10", null));
+  assert.equal(nextExam(rows, examInstant("2026-03-11", "01:00")), null);
+});

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CalendarClock, Download, ExternalLink, FileText, MapPin, Timer } from "lucide-react";
 import { requireVerified } from "../../../lib/dash/ctx";
 import { audienceLabel, fmtDate } from "../../../lib/dash/meta";
-import { TAB_LABELS, TAB_ORDER, countByCategory, dayName, isOver, pickTab, rowsForStudent, sortRows, timeRange } from "../../../lib/exams/student";
+import { TAB_LABELS, TAB_ORDER, countByCategory, dayName, isOver, nextExam, pickTab, rowsForStudent, sortRows, timeRange, todayIST } from "../../../lib/exams/student";
+import ExamCountdown from "../../../components/dashboard/ExamCountdown";
 import RelTime from "../../../components/dashboard/RelTime";
 import { OpenFile } from "../../../components/dashboard/Bits";
 
@@ -15,7 +16,7 @@ const dateOnly = (iso) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString(
 export default async function Exams({ searchParams }) {
   const sp = await searchParams;
   const { supabase, profile, isAdmin } = await requireVerified();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIST();
 
   // Row-level security returns only published notices for this student's department and semester.
   const [{ data: notices, error }, { data: sem }] = await Promise.all([
@@ -88,6 +89,7 @@ export default async function Exams({ searchParams }) {
           {shown.map((n) => {
             const rows = rowsOf(n.id);
             const over = isOver(rows, today);
+            const next = nextExam(rows);
             const noticeDocs = (docs || []).filter((d) => d.notice_id === n.id);
             const groups = GROUPS.map(([g, label]) => [label, n.details?.instructions?.[g] || []]).filter(([, items]) => items.length);
             const dates = n.details?.importantDates || [];
@@ -113,6 +115,8 @@ export default async function Exams({ searchParams }) {
                   ))}
                   {n.result_link && <a className="btn-s clay" href={n.result_link} target="_blank" rel="noreferrer noopener"><ExternalLink size={14} /> Open results</a>}
                 </div>
+
+                {next && <ExamCountdown startsAt={next.startsAt} endsAt={next.endsAt} subject={next.row.subject_name} code={next.row.subject_code} hasTime={next.hasTime} />}
 
                 {rows.length > 0 ? (
                   <div className="table-wrap">
