@@ -180,7 +180,7 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 
 **Setup**
 1. Run `supabase/dashboard-6-exams.sql` in the Supabase SQL Editor (after setup.sql and dashboard-1 to 5). It is safe to re-run.
-2. Add `ANTHROPIC_API_KEY` to `.env.local` and to the Vercel project's environment variables. Optionally set `EXAM_AI_MODEL` (default `claude-sonnet-5-5`). The key is server-only.
+2. Add an AI key to `.env.local` and to the Vercel project's environment variables (server-only, never `NEXT_PUBLIC_`): either `ANTHROPIC_API_KEY` (Claude, paid, default model `claude-sonnet-5-5`) or `GEMINI_API_KEY` (Google Gemini, has a free tier, default model alias `gemini-flash-latest`). If both are set, Claude is used unless `EXAM_AI_PROVIDER=gemini`. `EXAM_AI_MODEL` pins a specific model. With no key the upload still works and the admin fills the draft in by hand.
 3. A central admin gives each department admin their departments: `select public.set_admin_depts('<admin user id>', array['AI & Machine Learning']);`. An admin with no departments cannot upload.
 4. Optional: set a student's semester by hand (`profiles.semester`); otherwise it is worked out from their batch (Aug to Jan odd semester, Feb to Jul even).
 
@@ -192,7 +192,7 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Students are notified only when a notice is published.
 
 **Tests**
-- `npm run test:exams`: 96 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
+- `npm run test:exams`: 105 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
 - `supabase/tests/stage6.mjs`: 118 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
 
 **Try it for real (checklist)**
@@ -202,6 +202,7 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 4. As a student of that department and semester, open Examinations: see the notice, view and download the PDF, and find the notification. As a student of another department, confirm you see nothing.
 
 **Known limits**
+- Free Gemini tier: rate limited (a busy answer can be retried), PDFs over about 14 MB are refused, and Google may use free-tier content to improve its products, so upload only official public notices. Accuracy on real BMSIT PDFs has not been measured for either provider.
 - Never run against a real Anthropic key, real BMSIT PDFs or a live Supabase when this was written: the logic is tested with fakes and an in-memory Postgres, not end to end.
 - A PDF over 100 pages, or a timetable too long for one answer, is refused with a message asking to split it. Reading runs in the background for up to 5 minutes (`maxDuration`); on a shorter hosting limit, long PDFs can fail and be retried.
 - Academic year and degree programme are stored and shown but do not restrict who sees a notice; department and semester do.

@@ -47,7 +47,7 @@ export default async function ExamNotices() {
           <p>A central admin needs to give you your department(s) before you can upload exam notices.</p>
         </div>
       ) : (
-        <ExamUploader userId={user.id} departments={departments} aiReady={Boolean(aiConfig().apiKey)} />
+        <ExamUploader userId={user.id} departments={departments} aiReady={Boolean(aiConfig().apiKey)} keyName={aiConfig().keyName} />
       )}
 
       <h2 className="sub-h">Recent uploads</h2>

@@ -54,7 +54,7 @@ function summarize(result, meta) {
 const STEPS = [["uploading", "Upload"], ["saving", "Check file"], ["reading", "Read with AI"], ["done", "Ready to review"]];
 const ORDER = { idle: -1, checking: 0, uploading: 0, saving: 1, reading: 2, done: 3, failed: 2 };
 
-export default function ExamUploader({ userId, departments, aiReady }) {
+export default function ExamUploader({ userId, departments, aiReady, keyName = "ANTHROPIC_API_KEY" }) {
   const router = useRouter();
   const alive = useRef(true);
   const inputRef = useRef(null);
@@ -164,7 +164,7 @@ export default function ExamUploader({ userId, departments, aiReady }) {
     <section className="exam-up" aria-label="Upload an examination PDF">
       {!aiReady && (
         <p className="form-msg err" role="status">
-          AI reading is not switched on for this server yet (the <code>ANTHROPIC_API_KEY</code> setting is missing). You can still upload, but the document will not be read until it is added.
+          AI reading is not switched on for this server yet (the <code>{keyName}</code> setting is missing). You can still upload, but the document will not be read until it is added.
         </p>
       )}
 
