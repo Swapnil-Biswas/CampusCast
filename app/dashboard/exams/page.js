@@ -1,62 +1,144 @@
-import { CalendarClock, MapPin, Timer } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, Download, ExternalLink, FileText, MapPin, Timer } from "lucide-react";
 import { requireVerified } from "../../../lib/dash/ctx";
 import { audienceLabel, fmtDate } from "../../../lib/dash/meta";
+import { TAB_LABELS, TAB_ORDER, countByCategory, dayName, isOver, pickTab, rowsForStudent, sortRows, timeRange } from "../../../lib/exams/student";
 import RelTime from "../../../components/dashboard/RelTime";
-import RecordEditor from "../../../components/dashboard/RecordEditor";
-import { OpenFile, Remind, Tabs } from "../../../components/dashboard/Bits";
+import { OpenFile } from "../../../components/dashboard/Bits";
 
 export const metadata = { title: "Examinations" };
 
-const TABS = [["upcoming", "Upcoming exams"], ["timetable", "Timetables"], ["result", "Results archive"]];
+const TYPE_LABEL = { timetable: "Timetable", notification: "Notification", guidelines: "Guidelines", result: "Results", circular: "Circular" };
+const GROUPS = [["examination", "Examination instructions"], ["hallTicket", "Hall ticket"], ["requiredDocuments", "Required documents"], ["important", "Important notes"], ["other", "Other"]];
+const dateOnly = (iso) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "");
 
 export default async function Exams({ searchParams }) {
   const sp = await searchParams;
-  const tab = TABS.some(([v]) => v === sp.tab) ? sp.tab : "upcoming";
-  const { supabase, user, isAdmin } = await requireVerified();
-  const nowIso = new Date().toISOString();
-  let q = supabase.from("exams").select("*");
-  q = tab === "upcoming" ? q.eq("kind", "exam").gte("exam_at", nowIso).order("exam_at") : tab === "timetable" ? q.eq("kind", "timetable").order("created_at", { ascending: false }) : q.eq("kind", "result").order("created_at", { ascending: false });
-  const [{ data, error }, { count: pastCount }] = await Promise.all([q, supabase.from("exams").select("id", { count: "exact", head: true }).eq("kind", "exam").lt("exam_at", nowIso)]);
-  const next = tab === "upcoming" ? data?.[0] : null;
+  const { supabase, profile, isAdmin } = await requireVerified();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Row-level security returns only published notices for this student's department and semester.
+  const [{ data: notices, error }, { data: sem }] = await Promise.all([
+    supabase.from("exam_notices")
+      .select("id, title, notice_type, category, special_kind, original_exam_name, semesters, academic_year, regulation, notification_date, degree_programme, result_link, details, audience_depts, published_at")
+      .eq("status", "published").order("published_at", { ascending: false }).limit(200),
+    supabase.rpc("exam_semester"),
+  ]);
+  const semester = typeof sem === "number" ? sem : null;
+  const all = notices || [];
+  const counts = countByCategory(all);
+  const { count: legacyCount } = await supabase.from("exams").select("id", { count: "exact", head: true });
+  const tab = sp.tab === "earlier" ? "earlier" : pickTab(sp.tab, counts);
+
+  const shown = tab === "earlier" ? [] : all.filter((n) => n.category === tab);
+  const ids = shown.map((n) => n.id);
+  const [{ data: entries }, { data: docs }] = ids.length ? await Promise.all([
+    supabase.from("exam_timetable_entries").select("*").in("notice_id", ids),
+    supabase.from("exam_documents").select("id, notice_id, original_filename, page_count").in("notice_id", ids).order("created_at"),
+  ]) : [{ data: [] }, { data: [] }];
+  const rowsOf = (id) => sortRows(rowsForStudent((entries || []).filter((e) => e.notice_id === id), { branch: profile.branch, semester }));
+
+  let legacy = [];
+  if (tab === "earlier") {
+    const { data } = await supabase.from("exams").select("*").order("created_at", { ascending: false }).limit(100);
+    legacy = data || [];
+  }
+
+  const tabs = [...TAB_ORDER.map((t) => [t, TAB_LABELS[t], counts[t] || 0]), ...(legacyCount ? [["earlier", "Earlier postings", legacyCount]] : [])];
 
   return (
     <>
       <div className="page-head">
-        <div><h1>Examinations</h1><p>Your exam calendar, timetables and results. If a date, time or venue changes you are alerted as Now.</p></div>
-        {isAdmin && <RecordEditor table="exams" userId={user.id} isAdmin big />}
+        <div>
+          <h1>Examinations</h1>
+          <p>Official notices and timetables for your department{semester ? ` and semester ${semester}` : ""}. Each one links to the original PDF.</p>
+        </div>
+        {isAdmin && <Link className="btn-s" href="/dashboard/admin/exams">Manage exam notices</Link>}
       </div>
 
-      {next && (
-        <div className="reach" style={{ marginBottom: 16 }}>
-          Next exam: <b>{next.title}</b> <RelTime date={next.exam_at} mode="until" /> · {fmtDate(next.exam_at)}
-        </div>
-      )}
-      <Tabs tabs={TABS} current={tab} base="/dashboard/exams" />
+      <nav className="filters" aria-label="Examination category">
+        {tabs.map(([v, label, n]) => (
+          <Link key={v} className={"chip" + (tab === v ? " on" : "")} href={`/dashboard/exams?tab=${v}`} aria-current={tab === v ? "page" : undefined}>{label}{n > 0 && <small> {n}</small>}</Link>
+        ))}
+      </nav>
       {error && <p className="form-msg err">{error.message}</p>}
 
-      {!data?.length ? (
-        <div className="empty"><h2>{tab === "upcoming" ? "No exams scheduled" : tab === "timetable" ? "No timetables yet" : "No results published"}</h2>
-          <p>{tab === "upcoming" && pastCount ? `${pastCount} earlier exam${pastCount === 1 ? "" : "s"} are over.` : "Anything that applies to you will be listed here."}</p></div>
+      {tab === "earlier" ? (
+        legacy.length === 0 ? <div className="empty"><h2>Nothing here</h2></div> : (
+          <div className="feed">
+            {legacy.map((e) => (
+              <article key={e.id} className="notice" style={{ "--u": "#d9c8a8" }}>
+                <div className="notice-top"><span className="pill soft" style={{ "--c": "#d9c8a8" }}>{e.kind === "exam" ? "Exam" : e.kind === "timetable" ? "Timetable" : "Results"}</span>{e.course_code && <span className="pill soft" style={{ "--c": "#d9c8a8" }}>{e.course_code}</span>}{e.exam_at && <span className="when"><RelTime date={e.exam_at} mode="until" /></span>}</div>
+                <h3 className="notice-title">{e.title}</h3>
+                <p className="audience">For {audienceLabel(e)}</p>
+                {e.exam_at && <p className="when-line"><CalendarClock size={16} /> {fmtDate(e.exam_at)}{e.duration_min && <> · <Timer size={16} /> {e.duration_min} min</>}{e.venue && <> · <MapPin size={16} /> {e.venue}</>}</p>}
+                {e.notes && <p style={{ whiteSpace: "pre-wrap" }}>{e.notes}</p>}
+                <div className="notice-actions"><OpenFile file={e.file} /></div>
+              </article>
+            ))}
+          </div>
+        )
+      ) : shown.length === 0 ? (
+        <div className="empty">
+          <h2>No {TAB_LABELS[tab]} notice yet</h2>
+          <p>When your college publishes one for your department{semester ? ` and semester ${semester}` : ""}, it will appear here and you will get a notification.</p>
+        </div>
       ) : (
         <div className="feed">
-          {data.map((e) => (
-            <article key={e.id} className="notice" style={{ "--u": e.kind === "exam" ? "#e8603c" : e.kind === "timetable" ? "#f3b63f" : "#7fb48a" }}>
-              <div className="notice-top">
-                <span className="pill soft" style={{ "--c": "#e8603c" }}>{e.kind === "exam" ? "Exam" : e.kind === "timetable" ? "Timetable" : "Results"}</span>
-                {e.course_code && <span className="pill soft" style={{ "--c": "#d9c8a8" }}>{e.course_code}</span>}
-                {e.exam_at && <span className="when"><RelTime date={e.exam_at} mode="until" /></span>}
-              </div>
-              <h3 className="notice-title">{e.title}</h3>
-              <p className="audience">For {audienceLabel(e)}</p>
-              {e.exam_at && <p className="when-line"><CalendarClock size={16} /> {fmtDate(e.exam_at)}{e.duration_min && <> · <Timer size={16} /> {e.duration_min} min</>}{e.venue && <> · <MapPin size={16} /> {e.venue}</>}</p>}
-              {e.notes && <p style={{ whiteSpace: "pre-wrap" }}>{e.notes}</p>}
-              <div className="notice-actions">
-                <OpenFile file={e.file} />
-                {e.kind === "exam" && <Remind kind="exam" refId={e.id} title={e.title} url="/dashboard/exams" at={e.exam_at} offsets={[["1 week before", 7 * 864e5], ["1 day before", 864e5], ["2 hours before", 72e5]]} />}
-                {isAdmin && <RecordEditor table="exams" record={e} userId={user.id} isAdmin />}
-              </div>
-            </article>
-          ))}
+          {shown.map((n) => {
+            const rows = rowsOf(n.id);
+            const over = isOver(rows, today);
+            const noticeDocs = (docs || []).filter((d) => d.notice_id === n.id);
+            const groups = GROUPS.map(([g, label]) => [label, n.details?.instructions?.[g] || []]).filter(([, items]) => items.length);
+            const dates = n.details?.importantDates || [];
+            return (
+              <article key={n.id} className={`notice exam-notice${over ? " over" : ""}`} style={{ "--u": "#e8603c" }}>
+                <div className="notice-top">
+                  <span className="pill soft" style={{ "--c": "#e8603c" }}>{TAB_LABELS[n.category]}</span>
+                  {n.special_kind && <span className="pill soft" style={{ "--c": "#f3b63f" }}>{n.special_kind[0].toUpperCase() + n.special_kind.slice(1)}</span>}
+                  <span className="pill soft" style={{ "--c": "#d9c8a8" }}>{TYPE_LABEL[n.notice_type] || n.notice_type}</span>
+                  {over && <span className="pill soft" style={{ "--c": "#d9c8a8" }}>Over</span>}
+                </div>
+                <h3 className="notice-title">{n.title}</h3>
+                <p className="audience">
+                  {[n.original_exam_name && `As written in the notice: ${n.original_exam_name}`, n.academic_year && `Academic year ${n.academic_year}`, n.regulation, n.notification_date && `Notice dated ${dateOnly(n.notification_date)}`].filter(Boolean).join(" · ")}
+                </p>
+
+                <div className="notice-actions">
+                  {noticeDocs.map((d) => (
+                    <span key={d.id} className="doc-actions">
+                      <a className="btn-s" href={`/api/exams/pdf/${d.id}`} target="_blank" rel="noreferrer"><FileText size={14} /> View original PDF <ExternalLink size={12} /></a>
+                      <a className="btn-s" href={`/api/exams/pdf/${d.id}?download=1`}><Download size={14} /> Download</a>
+                    </span>
+                  ))}
+                  {n.result_link && <a className="btn-s clay" href={n.result_link} target="_blank" rel="noreferrer noopener"><ExternalLink size={14} /> Open results</a>}
+                </div>
+
+                {rows.length > 0 ? (
+                  <div className="table-wrap">
+                    <table className="tbl exam-tt">
+                      <thead><tr><th>Date</th><th>Time</th><th>Subject</th><th>Code</th></tr></thead>
+                      <tbody>{rows.map((r) => (
+                        <tr key={r.id} className={r.exam_date && r.exam_date < today ? "past" : ""}>
+                          <td><b>{r.exam_date ? dateOnly(r.exam_date) : "—"}</b><small>{dayName(r.exam_date)}</small></td>
+                          <td>{timeRange(r.start_time, r.end_time) || "—"}{r.session && <small>{r.session}</small>}</td>
+                          <td>{r.subject_name || "—"}{r.notes && <small>{r.notes}</small>}</td>
+                          <td>{r.subject_code || "—"}</td>
+                        </tr>))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : n.notice_type === "timetable" && <p className="inline-msg">No timetable rows for your department and semester. Check the original PDF.</p>}
+
+                {dates.length > 0 && (
+                  <ul className="exam-dates">{dates.map((d, i) => <li key={i}><b>{d.date ? dateOnly(d.date) : d.dateText || ""}</b> {d.label}</li>)}</ul>
+                )}
+                {groups.map(([label, items]) => (
+                  <details key={label} className="exam-guide"><summary>{label}</summary><ul>{items.map((t, i) => <li key={i}>{t}</li>)}</ul></details>
+                ))}
+              </article>
+            );
+          })}
         </div>
       )}
     </>

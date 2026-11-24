@@ -265,3 +265,14 @@
 .stat-tile span { font-size: 13px; opacity: .75; }
 .stat-tile.on { border-color: var(--ink); border-left-color: var(--c); box-shadow: 3px 3px 0 var(--ink); }
 .rv-decide { border-color: var(--ink); }
+
+/* student examinations */
+.filters .chip small { opacity: .7; margin-left: 2px; }
+.exam-notice { display: grid; gap: 12px; }
+.exam-notice.over { opacity: .8; }
+.exam-notice .doc-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.exam-tt tr.past { opacity: .55; }
+.exam-dates { margin: 0; padding-left: 18px; }
+.exam-guide { border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--card); }
+.exam-guide summary { font-weight: 600; cursor: pointer; }
+.exam-guide ul { margin: 8px 0 0; padding-left: 18px; }
