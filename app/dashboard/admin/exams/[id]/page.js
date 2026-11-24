@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { requireAdmin } from "../../../../../lib/dash/ctx";
 import { manageableDepartments } from "../../../../../lib/exams/access";
 import { isUuid } from "../../../../../lib/exams/validate";
+import ExamDecision from "../../../../../components/dashboard/ExamDecision";
 import ExamReview from "../../../../../components/dashboard/ExamReview";
 
 export const metadata = { title: "Review exam notice" };
@@ -39,7 +40,8 @@ export default async function ReviewNotice({ params }) {
 
   return (
     <>
-      <Link href="/dashboard/admin/exams" className="back-link"><ArrowLeft size={16} /> All exam notices</Link>
+      <Link href={isSuper ? "/dashboard/admin/exams/approvals" : "/dashboard/admin/exams"} className="back-link"><ArrowLeft size={16} /> {isSuper ? "Exam approvals" : "All exam notices"}</Link>
+      {isSuper && <ExamDecision noticeId={notice.id} status={notice.status} category={notice.category} audience={notice.audience_depts} />}
       <ExamReview
         notice={notice}
         entries={entries || []}

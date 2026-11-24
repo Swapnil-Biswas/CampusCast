@@ -98,3 +98,19 @@ test("row ids must be real ids, and too many rows are refused", () => {
   assert.equal(validateRows([row({ id: "3f0c1c52-0000-4000-8000-000000000001" })]).rows[0].id, "3f0c1c52-0000-4000-8000-000000000001");
   assert.equal(validateRows(Array.from({ length: 501 }, () => row())).ok, false);
 });
+
+import { validateDecision } from "../../lib/exams/validate.js";
+
+test("approve and publish need no reason; reject and request-changes do", () => {
+  assert.deepEqual(validateDecision({ action: "approve", reason: "ignored" }), { ok: true, action: "approve", reason: null });
+  assert.equal(validateDecision({ action: "publish" }).ok, true);
+  assert.equal(validateDecision({ action: "reject" }).ok, false);
+  assert.equal(validateDecision({ action: "request_changes", reason: "  ab " }).ok, false);
+  assert.equal(validateDecision({ action: "reject", reason: " Wrong semester " }).reason, "Wrong semester");
+});
+
+test("an unknown or missing action is refused", () => {
+  assert.equal(validateDecision({ action: "delete" }).ok, false);
+  assert.equal(validateDecision({}).ok, false);
+  assert.equal(validateDecision().ok, false);
+});

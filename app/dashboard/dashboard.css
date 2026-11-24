@@ -257,3 +257,11 @@
 .rv-tt td:nth-child(2) select { min-width: 54px; }
 .rv-tt td:nth-child(4) input { min-width: 88px; }
 .rv-tt td:nth-child(1) select { min-width: 120px; }
+
+/* exam approvals */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat-tile { display: grid; gap: 2px; padding: 10px 14px; border: 1.5px solid var(--line); border-left: 6px solid var(--c); border-radius: 12px; background: var(--card); color: var(--ink); text-decoration: none; }
+.stat-tile b { font-family: var(--font-d); font-size: 26px; line-height: 1; }
+.stat-tile span { font-size: 13px; opacity: .75; }
+.stat-tile.on { border-color: var(--ink); border-left-color: var(--c); box-shadow: 3px 3px 0 var(--ink); }
+.rv-decide { border-color: var(--ink); }

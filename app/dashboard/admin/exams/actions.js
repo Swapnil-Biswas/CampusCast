@@ -1,12 +1,12 @@
 "use server";
 import { createHash } from "node:crypto";
-import { requireAdmin } from "../../../../lib/dash/ctx";
+import { requireAdmin, requireSuper } from "../../../../lib/dash/ctx";
 import { manageableDepartments } from "../../../../lib/exams/access";
 import { aiConfig } from "../../../../lib/exams/config";
 import { sniffPdf } from "../../../../lib/exams/pdf";
 import { STALE_PROCESSING_MS } from "../../../../lib/exams/constants";
 import { clean } from "../../../../lib/exams/normalize";
-import { isUuid, validateNotice, validateRows } from "../../../../lib/exams/validate";
+import { isUuid, validateDecision, validateNotice, validateRows } from "../../../../lib/exams/validate";
 
 const BUCKET = "exam-pdfs";
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -142,6 +142,18 @@ export async function saveReview({ noticeId, notice, rows, submit = false }) {
   const { error: tErr } = await supabase.rpc("exam_notice_transition", { p_id: noticeId, p_action: "submit", p_reason: null });
   if (tErr) return { error: message(tErr), saved: true };
   return { ok: true, saved: true, submitted: true };
+}
+
+// A central admin's decision on a submitted notice. Only exam_notice_transition() can change the status, and it
+// re-checks the role, the current status and the reason. Publishing is what notifies students.
+export async function decideNotice({ noticeId, action, reason }) {
+  const { supabase } = await requireSuper();
+  if (!isUuid(noticeId)) return { error: "Invalid request." };
+  const v = validateDecision({ action, reason });
+  if (!v.ok) return { error: v.error };
+  const { error } = await supabase.rpc("exam_notice_transition", { p_id: noticeId, p_action: v.action, p_reason: v.reason });
+  if (error) return { error: message(error) };
+  return { ok: true };
 }
 
 // Throw away a draft upload: the notice, its rows, and the PDF in storage.
