@@ -161,3 +161,20 @@ Environment variables are listed in `.env.example`. `JOB_SECRET` must be identic
 ### Tests
 
 `node supabase/tests/stage1.mjs` (and `stage3`, `stage4`, `stage5`) run security checks inside a rolled-back transaction, impersonating different students. They never leave data behind.
+
+## Examination PDFs (AI reading)
+
+Department admins upload an official examination PDF at **Dashboard > Admin > Exam notices**. CampusCast reads it with Claude, fills in a **draft** notice and timetable, and marks anything unclear for a person to check. Nothing reaches students until a central admin approves and publishes it (the approval screens come in the next stages).
+
+**Setup**
+1. Run `supabase/dashboard-6-exams.sql` in the Supabase SQL Editor (after the other stage files).
+2. Add `ANTHROPIC_API_KEY` to `.env.local`, and to the Vercel project's environment variables. Optionally set `EXAM_AI_MODEL` (default `claude-sonnet-5-5`).
+3. A central admin gives each department admin their departments (`select public.set_admin_depts('<admin user id>', array['AI & Machine Learning'])`). A department admin with no departments cannot upload.
+
+**How it works:** the browser uploads the PDF to the private `exam-pdfs` bucket, the server checks it (real PDF, not password-protected, not cut off, 20 MB maximum), and `/api/exams/extract` sends it to Claude in the background. The PDF is sent as a document, so typed and scanned pages are both read; there is no separate OCR step. The model must answer through a fixed structure that records, for every detail, whether the PDF states it, whether it was inferred, or whether it is missing. The server then re-checks everything (`lib/exams/normalize.js`): dates and times are validated, departments must match the configured list, and the category is cross-checked against the PDF's own wording. Supplementary, practical, laboratory and revaluation notices are never classed as Final Examination, and an unclear category is left empty ("requires admin review") instead of guessed. The PDF is treated as untrusted data; the AI can only record data and cannot publish or approve anything.
+
+**Tests**
+- `npm run test:exams`: 74 checks of the PDF checks, the answer checking, the AI request, the filling of the draft and the whole extraction run. No network or API key needed.
+- `supabase/tests/stage6.mjs`: database access rules and workflow (needs `PGPASSWORD`, like the other stage tests).
+
+**Known limits:** a PDF over 100 pages, or a timetable too long for one answer, is refused with a message asking to split it. Reading runs in the background for up to 5 minutes (`maxDuration` on the route); on a hosting plan with a shorter limit, long PDFs can fail and be retried.

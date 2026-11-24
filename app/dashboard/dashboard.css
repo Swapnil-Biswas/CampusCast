@@ -174,3 +174,47 @@
 .skel { border-radius: 14px; background: linear-gradient(90deg, rgba(0,0,0,.06), rgba(0,0,0,.12), rgba(0,0,0,.06)); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
 @keyframes skel { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+/* ===== Exam notices: PDF upload and extraction status ===== */
+.sub-h { font-family: var(--font-d); font-size: 22px; margin: 28px 0 12px; letter-spacing: -.01em; }
+.exam-up { display: grid; gap: 14px; max-width: 860px; }
+.exam-up code { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 0 5px; }
+.drop { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; padding: 38px 18px; cursor: pointer;
+  background: var(--card); border: 2px dashed color-mix(in srgb, var(--ink) 35%, transparent); border-radius: 16px; transition: background .15s, border-color .15s; }
+.drop:hover, .drop.over, .drop:focus-within { background: var(--soft); border-color: var(--clay); }
+.drop b { font-size: 17px; }
+.drop span { opacity: .7; font-size: 14px; }
+.drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.dz-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; }
+.dz-file { display: flex; align-items: center; gap: 12px; }
+.dz-file > div { flex: 1; min-width: 0; }
+.dz-file b { display: block; overflow-wrap: anywhere; }
+.dz-file small { opacity: .65; }
+.dz-preview summary { cursor: pointer; font-weight: 600; }
+.dz-preview object { width: 100%; height: min(70vh, 560px); margin-top: 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+.dz-depts { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dz-depts legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding: 0; }
+.dz-depts .chip { position: relative; cursor: pointer; flex-wrap: wrap; color: var(--ink); }
+.dz-depts .chip.on { color: var(--cream); }
+.dz-depts .chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.dz-depts .chip:focus-within { outline: 3px solid var(--clay); outline-offset: 2px; }
+.dz-depts .chip small { opacity: .6; font-size: 12px; }
+.dz-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.steps li { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; opacity: .55; }
+.steps li span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line); font-size: 12px; background: var(--soft); }
+.steps li.now, .steps li.done, .steps li.bad { opacity: 1; font-weight: 600; }
+.steps li.done span { background: #7fb48a; border-color: #4f8a5e; color: #fff; }
+.steps li.now span { border-color: var(--clay); }
+.steps li.bad span { background: var(--clay); border-color: var(--clay); color: #fff; }
+.progress { position: relative; height: 14px; border-radius: 999px; background: var(--soft); border: 1.5px solid var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--clay); transition: width .2s; }
+.progress small { position: absolute; right: 8px; top: -2px; font-size: 11px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .progress i { transition: none; } }
+.form-msg ul { margin: 8px 0 0; padding-left: 18px; }
+.form-msg ul.warn { list-style: none; padding-left: 0; }
+.form-msg ul.warn li { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; }
+.row-actions { white-space: nowrap; text-align: right; }
+@media (max-width: 720px) { .drop { padding: 26px 14px; } .steps { gap: 6px 12px; } .dz-actions .btn { width: 100%; } }
