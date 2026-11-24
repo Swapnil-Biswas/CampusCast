@@ -102,3 +102,51 @@ test("a row with no time counts down to the start of its day and lasts that day"
   assert.equal(n.startsAt, examInstant("2026-03-10", null));
   assert.equal(nextExam(rows, examInstant("2026-03-11", "01:00")), null);
 });
+
+import { examAgendaItems, sortNoticesSoonestFirst } from "../../lib/exams/student.js";
+
+const row = (date, start, extra = {}) => ({ id: `${date}-${start}`, exam_date: date, start_time: start, end_time: start ? `${String(+start.slice(0, 2) + 1).padStart(2, "0")}:00` : null, ...extra });
+const NOW = examInstant("2026-11-25", "12:00");
+
+test("notices are ordered by their nearest coming exam, soonest first", () => {
+  const out = sortNoticesSoonestFirst([
+    { id: "far", rows: [row("2026-12-20", "10:00")] },
+    { id: "near", rows: [row("2026-11-27", "10:00"), row("2026-12-05", "10:00")] },
+    { id: "mid", rows: [row("2026-12-01", "10:00")] },
+  ], NOW);
+  assert.deepEqual(out.map((x) => x.id), ["near", "mid", "far"]);
+});
+
+test("finished notices come after upcoming ones, the most recently finished first", () => {
+  const out = sortNoticesSoonestFirst([
+    { id: "old", rows: [row("2026-10-01", "10:00")] },
+    { id: "recent", rows: [row("2026-11-20", "10:00")] },
+    { id: "upcoming", rows: [row("2026-12-30", "10:00")] },
+    { id: "nodates", rows: [], publishedAt: "2026-11-01" },
+  ], NOW);
+  assert.deepEqual(out.map((x) => x.id), ["upcoming", "recent", "old", "nodates"]);
+});
+
+test("a notice whose only upcoming exam is later today still counts as upcoming", () => {
+  const out = sortNoticesSoonestFirst([{ id: "done", rows: [row("2026-11-24", "10:00")] }, { id: "today", rows: [row("2026-11-25", "15:00")] }], NOW);
+  assert.deepEqual(out.map((x) => x.id), ["today", "done"]);
+});
+
+test("exam rows become calendar items for the student's own department and semester only", () => {
+  const A = "AI & Machine Learning";
+  const entries = [
+    { id: "1", department: A, semester: 3, subject_name: "Data Structures", subject_code: "1BA1305", exam_date: "2026-11-27", start_time: "09:30:00", end_time: "11:00:00", session: "FN", notice: { category: "ia1", title: "IA 1 circular" } },
+    { id: "2", department: "Computer Science & Engineering", semester: 3, subject_name: "Other", exam_date: "2026-11-27", start_time: "09:30", notice: { category: "ia1" } },
+    { id: "3", department: A, semester: 5, subject_name: "Other sem", exam_date: "2026-11-27", start_time: "09:30", notice: { category: "ia1" } },
+    { id: "4", department: A, semester: 3, subject_name: "No time", exam_date: "2026-11-28", start_time: null, notice: { category: "final" } },
+    { id: "5", department: A, semester: 3, subject_name: "No date", exam_date: null, start_time: "10:00", notice: { category: "ia1" } },
+  ];
+  const items = examAgendaItems(entries, { branch: A, semester: 3 });
+  assert.deepEqual(items.map((i) => i.key), ["x1", "x4"]);
+  assert.equal(items[0].kind, "exam");
+  assert.equal(items[0].title, "IA 1 · Data Structures (1BA1305)");
+  assert.equal(items[0].at, "2026-11-27T04:00:00.000Z");          // 09:30 IST
+  assert.equal(items[0].end, "2026-11-27T05:30:00.000Z");
+  assert.equal(items[0].href, "/dashboard/exams?tab=ia1");
+  assert.match(items[1].title, /Final Examination · No time \(time not stated\)/);
+});

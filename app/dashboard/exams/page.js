@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarClock, Download, ExternalLink, FileText, MapPin, Timer } from "lucide-react";
 import { requireVerified } from "../../../lib/dash/ctx";
 import { audienceLabel, fmtDate } from "../../../lib/dash/meta";
-import { TAB_LABELS, TAB_ORDER, countByCategory, dayName, isOver, nextExam, pickTab, rowsForStudent, sortRows, timeRange, todayIST } from "../../../lib/exams/student";
+import { TAB_LABELS, TAB_ORDER, countByCategory, dayName, isOver, nextExam, pickTab, rowsForStudent, sortNoticesSoonestFirst, sortRows, timeRange, todayIST } from "../../../lib/exams/student";
 import ExamCountdown from "../../../components/dashboard/ExamCountdown";
 import RelTime from "../../../components/dashboard/RelTime";
 import { OpenFile } from "../../../components/dashboard/Bits";
@@ -31,13 +31,16 @@ export default async function Exams({ searchParams }) {
   const { count: legacyCount } = await supabase.from("exams").select("id", { count: "exact", head: true });
   const tab = sp.tab === "earlier" ? "earlier" : pickTab(sp.tab, counts);
 
-  const shown = tab === "earlier" ? [] : all.filter((n) => n.category === tab);
-  const ids = shown.map((n) => n.id);
+  const inTab = tab === "earlier" ? [] : all.filter((n) => n.category === tab);
+  const ids = inTab.map((n) => n.id);
   const [{ data: entries }, { data: docs }] = ids.length ? await Promise.all([
     supabase.from("exam_timetable_entries").select("*").in("notice_id", ids),
     supabase.from("exam_documents").select("id, notice_id, original_filename, page_count, deleted_at").in("notice_id", ids).order("created_at"),
   ]) : [{ data: [] }, { data: [] }];
   const rowsOf = (id) => sortRows(rowsForStudent((entries || []).filter((e) => e.notice_id === id), { branch: profile.branch, semester }));
+  // The notice with the nearest coming exam goes first; finished ones follow, most recent first.
+  const order = new Map(sortNoticesSoonestFirst(inTab.map((n) => ({ id: n.id, rows: rowsOf(n.id), publishedAt: n.published_at }))).map((x, i) => [x.id, i]));
+  const shown = [...inTab].sort((a, b) => order.get(a.id) - order.get(b.id));
 
   let legacy = [];
   if (tab === "earlier") {
