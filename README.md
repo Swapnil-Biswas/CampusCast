@@ -162,19 +162,49 @@ Environment variables are listed in `.env.example`. `JOB_SECRET` must be identic
 
 `node supabase/tests/stage1.mjs` (and `stage3`, `stage4`, `stage5`) run security checks inside a rolled-back transaction, impersonating different students. They never leave data behind.
 
-## Examination PDFs (AI reading)
+## Examination notices (AI-assisted, approval first)
 
-Department admins upload an official examination PDF at **Dashboard > Admin > Exam notices**. CampusCast reads it with Claude, fills in a **draft** notice and timetable, and marks anything unclear for a person to check. Nothing reaches students until a central admin approves and publishes it (the approval screens come in the next stages).
+Official exam PDFs go from a department admin to students through a fixed, auditable path. Nothing reaches students until a central admin approves **and** publishes it. The AI only fills in a draft.
+
+```
+upload PDF -> AI reads it -> draft (review + edit) -> submit -> central admin: approve / request changes / reject -> publish -> students notified
+```
+
+| Who | Where | What they can do |
+|---|---|---|
+| Department admin | Dashboard > Admin > **Exam notices** | Upload a PDF, check the AI's draft against the PDF, edit details and timetable, save, submit. Only for their own departments. |
+| Central admin (`super_admin`) | Dashboard > Admin > **Exam approvals** | Approve, request changes or reject (reason required), publish, archive. Assign departments to admins. |
+| Student | Dashboard > **Examinations** | IA 1, IA 2, IA 3, Final Examination and Special tabs, only for their department and semester. View or download the original PDF. |
+
+Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Examination for supplementary, practical, laboratory and revaluation notices). The wording used in the PDF (for example "CIE 2") is kept alongside. An unclear category stays empty ("Requires admin review") and blocks submitting until a person chooses one.
 
 **Setup**
-1. Run `supabase/dashboard-6-exams.sql` in the Supabase SQL Editor (after the other stage files).
-2. Add `ANTHROPIC_API_KEY` to `.env.local`, and to the Vercel project's environment variables. Optionally set `EXAM_AI_MODEL` (default `claude-sonnet-5-5`).
-3. A central admin gives each department admin their departments (`select public.set_admin_depts('<admin user id>', array['AI & Machine Learning'])`). A department admin with no departments cannot upload.
+1. Run `supabase/dashboard-6-exams.sql` in the Supabase SQL Editor (after setup.sql and dashboard-1 to 5). It is safe to re-run.
+2. Add `ANTHROPIC_API_KEY` to `.env.local` and to the Vercel project's environment variables. Optionally set `EXAM_AI_MODEL` (default `claude-sonnet-5-5`). The key is server-only.
+3. A central admin gives each department admin their departments: `select public.set_admin_depts('<admin user id>', array['AI & Machine Learning']);`. An admin with no departments cannot upload.
+4. Optional: set a student's semester by hand (`profiles.semester`); otherwise it is worked out from their batch (Aug to Jan odd semester, Feb to Jul even).
 
-**How it works:** the browser uploads the PDF to the private `exam-pdfs` bucket, the server checks it (real PDF, not password-protected, not cut off, 20 MB maximum), and `/api/exams/extract` sends it to Claude in the background. The PDF is sent as a document, so typed and scanned pages are both read; there is no separate OCR step. The model must answer through a fixed structure that records, for every detail, whether the PDF states it, whether it was inferred, or whether it is missing. The server then re-checks everything (`lib/exams/normalize.js`): dates and times are validated, departments must match the configured list, and the category is cross-checked against the PDF's own wording. Supplementary, practical, laboratory and revaluation notices are never classed as Final Examination, and an unclear category is left empty ("requires admin review") instead of guessed. The PDF is treated as untrusted data; the AI can only record data and cannot publish or approve anything.
+**How the AI step stays safe**
+- The browser uploads to the private `exam-pdfs` bucket; the server re-checks the file (real PDF, not password-protected, not cut off, 20 MB maximum) and `/api/exams/extract` sends it to Claude in the background. The PDF is sent as a document, so typed and scanned pages are both read.
+- The model must answer through a fixed structure that records, for every detail, whether the PDF states it, whether it was inferred, or whether it is missing, with page numbers and a short quote.
+- The server re-checks everything (`lib/exams/normalize.js`): real dates and times, departments from the configured list, category cross-checked against the PDF's own wording. Special exams are never classed as Final Examination.
+- The PDF is untrusted data. The AI can only record data; it has no way to submit, approve or publish. Status changes happen only through `exam_notice_transition()` in the database, which checks role, current status and reason, and writes the approval history and audit log.
+- Students are notified only when a notice is published.
 
 **Tests**
-- `npm run test:exams`: 74 checks of the PDF checks, the answer checking, the AI request, the filling of the draft and the whole extraction run. No network or API key needed.
-- `supabase/tests/stage6.mjs`: database access rules and workflow (needs `PGPASSWORD`, like the other stage tests).
+- `npm run test:exams`: 96 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
+- `supabase/tests/stage6.mjs`: 118 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
 
-**Known limits:** a PDF over 100 pages, or a timetable too long for one answer, is refused with a message asking to split it. Reading runs in the background for up to 5 minutes (`maxDuration` on the route); on a hosting plan with a shorter limit, long PDFs can fail and be retried.
+**Try it for real (checklist)**
+1. As a department admin, upload a real text PDF and a scanned PDF; check both drafts against the files.
+2. Upload an IA timetable and a final timetable; confirm the categories. Upload a supplementary notice; confirm it is Special, not Final.
+3. Submit; as a central admin request changes with a reason; as the department admin fix and submit again; approve; publish.
+4. As a student of that department and semester, open Examinations: see the notice, view and download the PDF, and find the notification. As a student of another department, confirm you see nothing.
+
+**Known limits**
+- Never run against a real Anthropic key, real BMSIT PDFs or a live Supabase when this was written: the logic is tested with fakes and an in-memory Postgres, not end to end.
+- A PDF over 100 pages, or a timetable too long for one answer, is refused with a message asking to split it. Reading runs in the background for up to 5 minutes (`maxDuration`); on a shorter hosting limit, long PDFs can fail and be retried.
+- Academic year and degree programme are stored and shown but do not restrict who sees a notice; department and semester do.
+- Timetable rows without a department or semester apply to everyone the notice is for.
+- The older `exams` table is kept only for reading under "Earlier postings"; new exam information goes through the approval path.
+- Changing a published notice means archiving it and submitting a new one; there is no edit-after-publish.
