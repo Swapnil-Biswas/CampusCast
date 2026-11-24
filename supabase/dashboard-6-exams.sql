@@ -7,7 +7,11 @@
 -- Nothing reaches students before a super_admin publishes it. Status only changes through
 -- exam_notice_transition(), never by a direct update.
 --
--- Roles (profiles.role):  admin = department admin (limited to profiles.admin_depts), super_admin = central admin.
+-- Roles (profiles.role = 'admin' for both, told apart by which department lists they have):
+--   uploader / information staff : admin with profiles.admin_depts   -> upload, review, edit, submit
+--   approver (HOD / cluster head): admin with profiles.approver_depts -> approve, request changes, reject, publish, archive
+--   super_admin (central admin)   : everything, for every department
+-- A person who submitted a notice cannot approve or publish it (a super_admin can, and it is written in the history).
 
 -- ============================================================
 -- 1. Profile columns
@@ -17,6 +21,9 @@
 alter table public.profiles add column if not exists semester smallint check (semester between 1 and 8);
 -- Departments an 'admin' may manage exam notices for. Changed only by a super_admin (set_admin_depts).
 alter table public.profiles add column if not exists admin_depts text[] not null default '{}';
+-- Departments an 'admin' may APPROVE and publish exam notices for: a head of department has one, a cluster head several.
+-- Changed only by a super_admin (set_approver_depts).
+alter table public.profiles add column if not exists approver_depts text[] not null default '{}';
 
 -- ============================================================
 -- 2. Departments (dynamic: add a row, no code change)
@@ -111,12 +118,25 @@ language sql stable security definer set search_path = public as $$
 $$;
 grant execute on function public.can_manage_exam_depts(text[]) to authenticated;
 
--- May the signed-in admin at least see notices that touch one of their departments (for common notices)?
+-- May the signed-in user approve / publish notices for exactly these departments?
+-- super_admin: any. admin: only when every department is one of their approver_depts (a cluster head covers several).
+create or replace function public.can_approve_exam_depts(p_depts text[]) returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when public.is_super_admin() then true
+    when public.is_admin() then coalesce(cardinality(p_depts), 0) > 0
+      and p_depts <@ coalesce((select approver_depts from public.profiles where id = auth.uid()), '{}')
+    else false
+  end
+$$;
+grant execute on function public.can_approve_exam_depts(text[]) to authenticated;
+
+-- May the signed-in admin at least see notices that touch one of their departments (as uploader or approver)?
 create or replace function public.can_see_exam_depts(p_depts text[]) returns boolean
 language sql stable security definer set search_path = public as $$
   select case
     when public.is_super_admin() then true
-    when public.is_admin() then coalesce(p_depts && (select admin_depts from public.profiles where id = auth.uid()), false)
+    when public.is_admin() then coalesce(p_depts && (select admin_depts || approver_depts from public.profiles where id = auth.uid()), false)
     else false
   end
 $$;
@@ -148,6 +168,21 @@ begin
   perform public.log_audit('exam.admin_depts', 'profile', p_user::text, jsonb_build_object('departments', p_depts));
 end $$;
 grant execute on function public.set_admin_depts(uuid, text[]) to authenticated;
+
+-- Super admin chooses which departments a head of department / cluster head may approve.
+create or replace function public.set_approver_depts(p_user uuid, p_depts text[]) returns void
+language plpgsql security definer set search_path = public as $$
+declare bad text[];
+begin
+  if not public.is_super_admin() then raise exception 'Only a super-admin can assign approvers.' using errcode = '42501'; end if;
+  p_depts := coalesce(p_depts, '{}');
+  select array_agg(d) into bad from unnest(p_depts) d where not exists (select 1 from public.departments x where x.name = d and x.active);
+  if bad is not null then raise exception 'Unknown department: %', bad[1]; end if;
+  update public.profiles set approver_depts = p_depts where id = p_user and role = 'admin';
+  if not found then raise exception 'That person is not a department admin.'; end if;
+  perform public.log_audit('exam.approver_depts', 'profile', p_user::text, jsonb_build_object('departments', p_depts));
+end $$;
+grant execute on function public.set_approver_depts(uuid, text[]) to authenticated;
 
 -- ============================================================
 -- 5. Examination notices
@@ -245,6 +280,8 @@ create table if not exists public.exam_documents (
   uploaded_by uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now()
 );
+-- Set when the stored PDF is removed some days after the exams (see dashboard-7-exam-alerts.sql). The row stays.
+alter table public.exam_documents add column if not exists deleted_at timestamptz;
 create index if not exists exam_documents_notice_idx on public.exam_documents (notice_id);
 create index if not exists exam_documents_sha_idx on public.exam_documents (sha256);
 alter table public.exam_documents enable row level security;
@@ -398,11 +435,11 @@ create policy "Admins read approval history" on public.exam_approvals for select
 -- 10. The workflow
 -- ============================================================
 --   submit            draft | changes_requested  -> pending_approval   (department admin of those departments, or super_admin)
---   approve           pending_approval           -> approved           (super_admin)
---   reject            pending_approval           -> rejected           (super_admin, reason required)
---   request_changes   pending_approval           -> changes_requested  (super_admin, reason required)
---   publish           approved                   -> published          (super_admin) + notifies the audience
---   archive           approved | published | rejected -> archived      (super_admin)
+--   approve           pending_approval           -> approved           (approver of ALL its departments, or super_admin; not the submitter)
+--   reject            pending_approval           -> rejected           (same, reason required)
+--   request_changes   pending_approval           -> changes_requested  (same, reason required)
+--   publish           approved                   -> published          (same, not the submitter) + notifies the audience
+--   archive           approved | published | rejected -> archived      (same)
 create or replace function public.exam_notice_transition(p_id uuid, p_action text, p_reason text default null)
 returns text language plpgsql security definer set search_path = public as $$
 declare
@@ -429,7 +466,14 @@ begin
     v_to := 'pending_approval';
     if n.status = 'changes_requested' then v_log := 'resubmit'; end if;
   elsif p_action in ('approve', 'reject', 'request_changes', 'publish', 'archive') then
-    if not public.is_super_admin() then raise exception 'Only a central admin can do that.' using errcode = '42501'; end if;
+    if not public.can_approve_exam_depts(n.audience_depts) then
+      raise exception 'Only the head of department or cluster head for all of this notice''s departments (or a central admin) can do that.' using errcode = '42501';
+    end if;
+    -- The person who sent a notice in does not approve or publish it. A central admin may, and the history says so.
+    if p_action in ('approve', 'publish') and n.submitted_by is not distinct from auth.uid() then
+      if not public.is_super_admin() then raise exception 'You submitted this notice, so someone else must %.', p_action using errcode = '42501'; end if;
+      v_reason := trim(coalesce(v_reason || ' ', '') || '(done by the central admin who submitted it)');
+    end if;
     if p_action in ('approve', 'reject', 'request_changes') and n.status <> 'pending_approval' then raise exception 'That notice is not waiting for approval.'; end if;
     if p_action = 'publish' and n.status <> 'approved' then raise exception 'Only an approved notice can be published.'; end if;
     if p_action = 'archive' and n.status not in ('approved', 'published', 'rejected') then raise exception 'That notice cannot be archived now.'; end if;
@@ -457,6 +501,26 @@ begin
   insert into public.exam_approvals (notice_id, action, from_status, to_status, actor, reason)
   values (n.id, v_log, n.status, v_to, auth.uid(), v_reason);
   perform public.log_audit('exam.' || v_log, 'exam_notice', n.id::text, jsonb_build_object('from', n.status, 'to', v_to, 'reason', v_reason));
+
+  -- Approvers hear about a notice that is waiting (the heads who cover all its departments; if there are none, the
+  -- central admins). The person who submitted hears what was decided. Both are in-app plus email per their settings.
+  if p_action = 'submit' then
+    insert into public.notifications (user_id, kind, title, body, url, urgency, ref_id)
+    select p.id, 'exam_review', 'Exam notice waiting for your approval: ' || n.title,
+           'Submitted for ' || array_to_string(n.audience_depts, ', '), '/dashboard/admin/exams/' || n.id, 1, n.id
+    from public.profiles p
+    where p.status = 'verified' and p.role in ('admin', 'super_admin') and p.id is distinct from auth.uid()
+      and (case when exists (select 1 from public.profiles c where c.status = 'verified' and c.role = 'admin' and c.id is distinct from auth.uid() and n.audience_depts <@ c.approver_depts)
+                then p.role = 'admin' and n.audience_depts <@ p.approver_depts
+                else p.role = 'super_admin' end);
+  elsif p_action in ('approve', 'reject', 'request_changes', 'publish') and coalesce(n.submitted_by, n.created_by) is not null
+        and coalesce(n.submitted_by, n.created_by) is distinct from auth.uid() then
+    insert into public.notifications (user_id, kind, title, body, url, urgency, ref_id)
+    values (coalesce(n.submitted_by, n.created_by),
+            'exam_status',
+            case p_action when 'approve' then 'Approved: ' when 'reject' then 'Rejected: ' when 'request_changes' then 'Changes requested: ' else 'Published to students: ' end || n.title,
+            v_reason, '/dashboard/admin/exams/' || n.id, 1, n.id);
+  end if;
 
   -- Students hear about it only now, when it goes live: in-app, and by email/push per their settings.
   if p_action = 'publish' then

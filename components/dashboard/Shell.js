@@ -16,7 +16,7 @@ export default function Shell({ user, unread, children }) {
   useEffect(() => setOpen(false), [path]);
 
   const isAdmin = user.role === "admin" || user.role === "super_admin";
-  const groups = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (!i.super || user.role === "super_admin") && (!i.admin || isAdmin || (i.href.endsWith("/compose") && user.leadsClub))) }))
+  const groups = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (!i.super || user.role === "super_admin") && (!i.approver || user.role === "super_admin" || user.approver) && (!i.admin || isAdmin || (i.href.endsWith("/compose") && user.leadsClub))) }))
     .filter((g) => g.items.length);
   const active = (i) => (i.exact ? path === i.href : path === i.href || path.startsWith(i.href + "/"));
   const tabs = ["/dashboard", "/dashboard/calendar", "/dashboard/connect", "/dashboard/notes", "/dashboard/saved"];

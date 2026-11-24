@@ -172,16 +172,23 @@ upload PDF -> AI reads it -> draft (review + edit) -> submit -> central admin: a
 
 | Who | Where | What they can do |
 |---|---|---|
-| Department admin | Dashboard > Admin > **Exam notices** | Upload a PDF, check the AI's draft against the PDF, edit details and timetable, save, submit. Only for their own departments. |
-| Central admin (`super_admin`) | Dashboard > Admin > **Exam approvals** | Approve, request changes or reject (reason required), publish, archive. Assign departments to admins. |
-| Student | Dashboard > **Examinations** | IA 1, IA 2, IA 3, Final Examination and Special tabs, only for their department and semester. View or download the original PDF. |
+| Information staff (admin with **Uploads for** departments) | Dashboard > Admin > **Exam notices** | Upload a PDF, check the AI's draft against the PDF, edit details and timetable, save, submit. Only for their own departments. |
+| Head of department / cluster head (admin with **Approves for** departments) | Dashboard > Admin > **Exam approvals** | Approve, request changes or reject (reason required), publish, archive. A cluster head covers several departments; a notice for several departments needs an approver who covers all of them. Told by notification (and email) when a notice is waiting. |
+| Central admin (`super_admin`) | People & roles > **Exam notice access** | Everything, for every department. Chooses who uploads and who approves for which departments. |
+| Student | Dashboard > **Examinations** | IA 1, IA 2, IA 3, Final Examination and Special tabs, only for their department and semester, with a live countdown, the original PDF (while it is kept), and automatic reminders. |
+
+**Separation of duties:** the person who submitted a notice cannot approve or publish it. A central admin can (so a small college can run with one), and the approval history records that they did.
+
+**Reminders (automatic):** every verified student of a published timetable is reminded **1 day** and **2 hours** before each exam, in the app and by email / push according to their alert settings (the email goes to the address on their CampusCast account). Nothing to click: it runs every minute from the database (`due_exam_reminders`).
+
+**PDF retention:** about **20 days** after a notice's last exam (`EXAM_PDF_RETENTION_DAYS`) its original PDF is deleted from storage; the notice and timetable stay and students see that the file was removed. The cleanup runs when a head or central admin opens Exam approvals.
 
 Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Examination for supplementary, practical, laboratory and revaluation notices). The wording used in the PDF (for example "CIE 2") is kept alongside. An unclear category stays empty ("Requires admin review") and blocks submitting until a person chooses one.
 
 **Setup**
-1. Run `supabase/dashboard-6-exams.sql` in the Supabase SQL Editor (after setup.sql and dashboard-1 to 5). It is safe to re-run.
+1. Run `supabase/dashboard-6-exams.sql`, then `supabase/dashboard-7-exam-alerts.sql`, in the Supabase SQL Editor (after setup.sql and dashboard-1 to 5). Both are safe to re-run. dashboard-7 schedules the reminder job when `pg_cron` is on (dashboard-5 enables it).
 2. Add AI keys to `.env.local` and to the Vercel project's environment variables (server-only, never `NEXT_PUBLIC_`). Providers are tried in this order, skipping any without a key, and the next one is used automatically when one is rate limited, down or cannot read the file: `ANTHROPIC_API_KEY` (Claude, paid) -> `GEMINI_API_KEY` (Google Gemini, free tier, reads typed and scanned PDFs) -> `GROQ_API_KEY` (Groq, free tier, typed PDFs only: it reads the PDF's text layer, so a scanned PDF is left to Gemini). `EXAM_AI_PROVIDER` forces one provider; `EXAM_AI_MODEL` pins the first provider's model, `GEMINI_MODEL` and `GROQ_MODEL` pin those two. Defaults: `claude-sonnet-5-5`, `gemini-flash-latest`, `llama-3.3-70b-versatile`. With no key the upload still works and the admin fills the draft in by hand.
-3. A central admin gives each department admin their departments: `select public.set_admin_depts('<admin user id>', array['AI & Machine Learning']);`. An admin with no departments cannot upload.
+3. A central admin makes each staff member an Admin (People & roles), then ticks their departments under **Exam notice access**: **Uploads for** (information staff) and **Approves for** (head of department / cluster head). Or in SQL: `select public.set_admin_depts('<user id>', array['AI & Machine Learning']);` and `select public.set_approver_depts('<user id>', array['AI & Machine Learning']);`. An admin with no departments cannot upload or approve.
 4. Optional: set a student's semester by hand (`profiles.semester`); otherwise it is worked out from their batch (Aug to Jan odd semester, Feb to Jul even).
 
 **How the AI step stays safe**
@@ -192,8 +199,9 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Students are notified only when a notice is published.
 
 **Tests**
-- `npm run test:exams`: 118 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
+- `npm run test:exams`: 133 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
 - `supabase/tests/stage6.mjs`: 118 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
+- `supabase/tests/stage7.mjs`: 90 checks of the approver hierarchy, self-approval blocking, notifications to approvers, reminders (windows, duplicates, department and semester matching) and PDF retention.
 
 **Try it for real (checklist)**
 1. As a department admin, upload a real text PDF and a scanned PDF; check both drafts against the files.

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { requireSuper } from "../../../../../lib/dash/ctx";
+import { after } from "next/server";
+import { requireApprover } from "../../../../../lib/dash/ctx";
+import { purgeExpiredPdfs, retentionDays } from "../../../../../lib/exams/retention";
 import { CATEGORY_LABELS } from "../../../../../lib/exams/constants";
 
 export const metadata = { title: "Exam approvals" };
@@ -11,7 +13,9 @@ const TABS = [
 const when = (iso) => (iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "—");
 
 export default async function ExamApprovals({ searchParams }) {
-  const { supabase } = await requireSuper();
+  const { supabase, isSuper } = await requireApprover();
+  // Housekeeping after the page is sent: remove the PDFs of notices whose exams ended long ago (rows stay).
+  after(() => purgeExpiredPdfs(supabase, retentionDays()));
   const sp = await searchParams;
   const tab = TABS.some((t) => t[0] === sp?.status) ? sp.status : "pending_approval";
 
@@ -33,7 +37,7 @@ export default async function ExamApprovals({ searchParams }) {
       <div className="page-head">
         <div>
           <h1>Exam approvals</h1>
-          <p>Notices sent in by department admins. Nothing reaches students until you approve and publish it.</p>
+          <p>{isSuper ? "Notices sent in by information staff. Nothing reaches students until a head of department, cluster head or central admin approves and publishes it." : "Notices sent in for the departments you head. Nothing reaches students until you approve and publish it."}</p>
         </div>
       </div>
 

@@ -18,8 +18,9 @@ export async function GET(req, { params }) {
   const { profile } = await getProfile(supabase, user.id);
   if (profile?.status !== "verified") return deny(403, "Your profile is not verified yet.");
 
-  const { data: doc } = await supabase.from("exam_documents").select("storage_path, original_filename").eq("id", id).maybeSingle();
+  const { data: doc } = await supabase.from("exam_documents").select("storage_path, original_filename, deleted_at").eq("id", id).maybeSingle();
   if (!doc) return deny(404, "Not found.");
+  if (doc.deleted_at) return deny(410, "The original PDF was removed some days after the exams ended.");
 
   const download = new URL(req.url).searchParams.get("download") === "1";
   const name = doc.original_filename.replace(/[^\w.\- ()]+/g, "_").slice(0, 120) || "exam-notice.pdf";

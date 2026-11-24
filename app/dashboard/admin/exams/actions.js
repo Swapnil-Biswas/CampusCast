@@ -147,12 +147,25 @@ export async function saveReview({ noticeId, notice, rows, submit = false }) {
 // A central admin's decision on a submitted notice. Only exam_notice_transition() can change the status, and it
 // re-checks the role, the current status and the reason. Publishing is what notifies students.
 export async function decideNotice({ noticeId, action, reason }) {
-  const { supabase } = await requireSuper();
+  const { supabase } = await requireAdmin();   // the database checks that this person approves for ALL the notice's departments
   if (!isUuid(noticeId)) return { error: "Invalid request." };
   const v = validateDecision({ action, reason });
   if (!v.ok) return { error: v.error };
   const { error } = await supabase.rpc("exam_notice_transition", { p_id: noticeId, p_action: v.action, p_reason: v.reason });
   if (error) return { error: message(error) };
+  return { ok: true };
+}
+
+// A central admin chooses which departments a staff member uploads for and which they approve for
+// (head of department: one; cluster head: several).
+export async function setExamAccess({ userId, uploadDepts, approveDepts }) {
+  const { supabase } = await requireSuper();
+  if (!isUuid(userId)) return { error: "Invalid request." };
+  const list = (v) => [...new Set((Array.isArray(v) ? v : []).filter((d) => typeof d === "string"))].slice(0, 20);
+  const a = await supabase.rpc("set_admin_depts", { p_user: userId, p_depts: list(uploadDepts) });
+  if (a.error) return { error: message(a.error) };
+  const b = await supabase.rpc("set_approver_depts", { p_user: userId, p_depts: list(approveDepts) });
+  if (b.error) return { error: message(b.error) };
   return { ok: true };
 }
 

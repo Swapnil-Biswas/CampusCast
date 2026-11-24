@@ -109,7 +109,7 @@ export default function ExamReview({ notice, entries, departments, pdf, extracti
             <b>{pdf?.filename || "Original PDF"}</b>
             {pdf?.url && <a className="btn-s" href={pdf.url} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Open</a>}
           </div>
-          {pdf?.url ? <iframe title="Original examination PDF" src={pdf.url} /> : <div className="empty"><p>The original PDF could not be loaded.</p></div>}
+          {pdf?.url ? <iframe title="Original examination PDF" src={pdf.url} /> : <div className="empty"><p>{pdf?.removed ? "The original PDF was removed some days after the exams ended, to save storage. The details above are kept." : "The original PDF could not be loaded."}</p></div>}
         </aside>
 
         <form className="rv-form" onSubmit={(e) => { e.preventDefault(); run(false); }}>

@@ -288,3 +288,11 @@
 .exam-cd-box i { display: none; }
 .exam-cd.live { background: #2f7a4a; }
 .exam-cd-live { margin: 0; font-weight: 700; }
+
+/* exam access (people page) */
+.acc-group { border: 0; padding: 0; margin: 0 0 10px; min-width: 0; }
+.acc-group legend { font-weight: 600; font-size: 13px; padding: 0; }
+.acc-group small { display: block; opacity: .65; margin-bottom: 4px; }
+.acc-group .chip { color: var(--ink); cursor: pointer; padding: 3px 10px; font-size: 13px; }
+.acc-group .chip.on { color: var(--cream); }
+.acc-group .chips { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -5,7 +5,7 @@ import { Archive, Check, LoaderCircle, MessageSquareWarning, Megaphone, X } from
 import { decideNotice } from "../../app/dashboard/admin/exams/actions";
 
 // What a central admin can do depends on where the notice is in the workflow. The database enforces the same rules.
-export default function ExamDecision({ noticeId, status, category, audience }) {
+export default function ExamDecision({ noticeId, status, category, audience, ownSubmission = false }) {
   const router = useRouter();
   const [ask, setAsk] = useState(null);       // "reject" | "request_changes" while a reason is being written
   const [reason, setReason] = useState("");
@@ -27,14 +27,15 @@ export default function ExamDecision({ noticeId, status, category, audience }) {
   const Spin = ({ a, icon }) => (busy === a ? <LoaderCircle size={14} className="spin" /> : icon);
 
   return (
-    <section className="rv-card rv-decide" aria-label="Central admin decision">
+    <section className="rv-card rv-decide" aria-label="Approval decision">
       <h2>Decision</h2>
       {status === "pending_approval" && (
         <>
           <p className="inline-msg">Check the details and the timetable against the PDF. {!category && <b>This notice has no category yet and cannot be approved.</b>}</p>
+          {ownSubmission && <p className="form-msg err" role="status">You submitted this notice, so someone else (another head of department, a cluster head or a central admin) has to approve it. You can still send it back or reject it.</p>}
           {!ask ? (
             <div className="dz-actions">
-              <button type="button" className="btn" disabled={off || !category} onClick={() => go("approve")}><Spin a="approve" icon={<Check size={16} />} /> Approve</button>
+              <button type="button" className="btn" disabled={off || !category || ownSubmission} onClick={() => go("approve")}><Spin a="approve" icon={<Check size={16} />} /> Approve</button>
               <button type="button" className="btn-s" disabled={off} onClick={() => setAsk("request_changes")}><MessageSquareWarning size={14} /> Request changes</button>
               <button type="button" className="btn-s" disabled={off} onClick={() => setAsk("reject")}><X size={14} /> Reject</button>
             </div>
@@ -55,7 +56,7 @@ export default function ExamDecision({ noticeId, status, category, audience }) {
         <>
           <p className="inline-msg">Approved. Students in {audience.join(", ")} are told about it only when you publish.</p>
           <div className="dz-actions">
-            <button type="button" className="btn" disabled={off} onClick={() => confirmGo("publish", "Publish this notice now? Matching students will be notified.")}><Spin a="publish" icon={<Megaphone size={16} />} /> Publish to students</button>
+            <button type="button" className="btn" disabled={off || ownSubmission} title={ownSubmission ? "Someone else must publish it" : ""} onClick={() => confirmGo("publish", "Publish this notice now? Matching students will be notified.")}><Spin a="publish" icon={<Megaphone size={16} />} /> Publish to students</button>
             <button type="button" className="btn-s" disabled={off} onClick={() => confirmGo("archive", "Archive this notice? It will not be published.")}><Archive size={14} /> Archive</button>
           </div>
         </>
