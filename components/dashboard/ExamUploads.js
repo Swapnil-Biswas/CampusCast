@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, RotateCw, Trash2 } from "lucide-react";
 import { browserClient } from "../../lib/supabase/client";
@@ -86,6 +87,7 @@ export default function ExamUploads({ rows: initial }) {
                 </td>
                 <td><span className="pill soft" style={{ "--c": color }}>{label}</span></td>
                 <td className="row-actions">
+                  {(!x || !READING.has(x.status)) && <Link className="btn-s" href={`/dashboard/admin/exams/${r.noticeId}`}>{["draft", "changes_requested"].includes(r.noticeStatus) ? "Review" : "View"}</Link>}
                   {x?.status === "failed" && x.retryable && <button type="button" className="btn-s" disabled={busy === r.docId} onClick={() => retry(r)}><RotateCw size={14} /> Retry</button>}
                   {r.noticeStatus === "draft" && <button type="button" className="icon-btn" disabled={busy === r.docId} onClick={() => remove(r)} aria-label={`Remove ${r.filename}`}><Trash2 size={16} /></button>}
                 </td>

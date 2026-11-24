@@ -218,3 +218,42 @@
 .form-msg ul.warn li { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; }
 .row-actions { white-space: nowrap; text-align: right; }
 @media (max-width: 720px) { .drop { padding: 26px 14px; } .steps { gap: 6px 12px; } .dz-actions .btn { width: 100%; } }
+
+/* exam notice review */
+.back-link { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 14px; opacity: .8; text-decoration: none; color: inherit; }
+.back-link:hover { opacity: 1; text-decoration: underline; }
+.rv { display: grid; gap: 14px; }
+.rv-grid { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 1080px) { .rv-grid { grid-template-columns: minmax(340px, 5fr) minmax(0, 7fr); } .rv-pdf { position: sticky; top: 12px; } .rv-pdf iframe { height: calc(100vh - 110px); } }
+.rv-pdf { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; overflow: hidden; }
+.rv-pdf-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.rv-pdf-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-pdf iframe { display: block; width: 100%; height: 480px; border: 0; background: var(--soft); }
+.rv-form { display: grid; gap: 14px; min-width: 0; }
+.rv-fs { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 14px; }
+.rv-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+.rv-card h2 { font-family: var(--font-d); font-size: 20px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+.rv-card h2 small { font: 400 13px var(--font-b, inherit); opacity: .65; }
+.rv-two { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.rv .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rv .chip { color: var(--ink); cursor: pointer; }
+.rv .chip.on { color: var(--cream); }
+.rv .field input, .rv .field select, .rv .field textarea { max-width: 100%; }
+.rv-fs:disabled .chip { cursor: default; }
+.chk { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #fdebc3; border: 1px solid #d99a1d; color: #5a3d00; vertical-align: middle; }
+.rv-tt input, .rv-tt select { min-width: 0; width: 100%; font-size: 13px; padding: 5px 6px; }
+.rv-tt td:nth-child(3) input { min-width: 170px; }
+.rv-tt td:nth-child(9) input { min-width: 130px; }
+.rv-tt input[type="date"] { min-width: 130px; }
+.rv-tt input[type="time"] { min-width: 96px; }
+.rv-tt tr.chk-row { background: #fff8e6; }
+.rv-date { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+.rv-bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; padding: 10px 12px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.rv-bar .inline-msg { margin-right: auto; }
+.rv-hist { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.rv-hist li { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.rv-hist p { margin: 4px 0 0; opacity: .8; }
+@media (max-width: 720px) { .rv-date { grid-template-columns: 1fr auto; } .rv-date input[type="text"] { grid-column: 1 / -1; } .rv-bar .btn, .rv-bar .btn-s { flex: 1; justify-content: center; } }
+.rv-tt td:nth-child(2) select { min-width: 54px; }
+.rv-tt td:nth-child(4) input { min-width: 88px; }
+.rv-tt td:nth-child(1) select { min-width: 120px; }

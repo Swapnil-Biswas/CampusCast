@@ -6,6 +6,7 @@ import { aiConfig } from "../../../../lib/exams/config";
 import { sniffPdf } from "../../../../lib/exams/pdf";
 import { STALE_PROCESSING_MS } from "../../../../lib/exams/constants";
 import { clean } from "../../../../lib/exams/normalize";
+import { isUuid, validateNotice, validateRows } from "../../../../lib/exams/validate";
 
 const BUCKET = "exam-pdfs";
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -89,6 +90,58 @@ export async function retryExtraction(extractionId) {
     .select("id").single();
   if (error) return { error: message(error) };
   return { extractionId: next.id };
+}
+
+// Save the review screen: the notice's details and its timetable rows. With submit:true it then sends the notice
+// for central approval. The database re-checks everything (who may edit, which status, what a submit needs).
+export async function saveReview({ noticeId, notice, rows, submit = false }) {
+  const { supabase, user, isSuper } = await requireAdmin();
+  if (!isUuid(noticeId)) return { error: "Invalid request." };
+
+  const { data: current } = await supabase.from("exam_notices").select("id, status, audience_depts, details").eq("id", noticeId).maybeSingle();
+  if (!current) return { error: "That notice was not found." };
+  if (!["draft", "changes_requested"].includes(current.status)) return { error: "This notice can no longer be edited." };
+
+  const allowed = (await manageableDepartments(supabase, user.id, isSuper)).map((d) => d.name);
+  const vn = validateNotice(notice, { allowedDepartments: allowed });
+  if (!vn.ok) return { error: vn.errors[0], errors: vn.errors };
+  const audience = vn.value.audience_depts || current.audience_depts;
+  const vr = validateRows(rows, { category: vn.value.category, audience });
+  if (!vr.ok) return { error: vr.errors[0], errors: vr.errors };
+
+  const details = { ...(current.details || {}), importantDates: vn.details.importantDates, instructions: vn.details.instructions };
+  const { data: saved, error: nErr } = await supabase.from("exam_notices").update({ ...vn.value, details }).eq("id", noticeId).select("id");
+  if (nErr) return { error: message(nErr) };
+  if (!saved?.length) return { error: "This notice can no longer be edited." };
+
+  // Timetable: update the rows that still exist, add the new ones, then remove the ones that were deleted.
+  const { data: existing, error: eErr } = await supabase.from("exam_timetable_entries").select("id").eq("notice_id", noticeId);
+  if (eErr) return { error: message(eErr) };
+  const have = new Set((existing || []).map((e) => e.id));
+  const keep = new Set();
+  const inserts = [];
+  for (const { id, ...row } of vr.rows) {
+    if (id && have.has(id)) {
+      keep.add(id);
+      const { error } = await supabase.from("exam_timetable_entries").update(row).eq("id", id).eq("notice_id", noticeId);
+      if (error) return { error: message(error) };
+    } else inserts.push({ ...row, notice_id: noticeId });
+  }
+  if (inserts.length) {
+    const { data: added, error } = await supabase.from("exam_timetable_entries").insert(inserts).select("id");
+    if (error) return { error: message(error) };
+    (added || []).forEach((a) => keep.add(a.id));
+  }
+  const drop = [...have].filter((id) => !keep.has(id));
+  if (drop.length) {
+    const { error } = await supabase.from("exam_timetable_entries").delete().in("id", drop).eq("notice_id", noticeId);
+    if (error) return { error: message(error) };
+  }
+
+  if (!submit) return { ok: true, saved: true };
+  const { error: tErr } = await supabase.rpc("exam_notice_transition", { p_id: noticeId, p_action: "submit", p_reason: null });
+  if (tErr) return { error: message(tErr), saved: true };
+  return { ok: true, saved: true, submitted: true };
 }
 
 // Throw away a draft upload: the notice, its rows, and the PDF in storage.
