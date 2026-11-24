@@ -84,7 +84,7 @@ test("a PDF is read, saved, and the draft notice and timetable are filled in", a
   assert.equal(calls.length, 1);
   assert.equal(w.extraction.status, "completed");
   assert.equal(w.extraction.requires_review, true);
-  assert.equal(w.extraction.model, "claude-sonnet-5-5");
+  assert.equal(w.extraction.model, "anthropic:claude-sonnet-5-5");
   assert.equal(w.extraction.result.categoryCode, "ia2");
   assert.equal(w.extraction.result.originalExaminationName, "CIE 2");
   assert.ok(w.extraction.field_meta.category);

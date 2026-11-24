@@ -28,16 +28,16 @@ export async function POST(req) {
   if (!row) return json({ error: "Not found." }, 404);
   if (row.status !== "queued") return json({ status: row.status }, 200);
 
-  const { provider, keyName, apiKey, model } = aiConfig();
-  if (!apiKey) {
+  const { providers } = aiConfig();
+  if (!providers.length) {
     await supabase.from("exam_extractions").update({
       status: "failed", finished_at: new Date().toISOString(),
-      error: `AI extraction isn't set up on this server yet (${keyName} is missing).`,
+      error: `AI extraction isn't set up on this server yet (add GEMINI_API_KEY or GROQ_API_KEY).`,
       field_meta: { _failure: { code: "not_configured", retryable: true } },
     }).eq("id", extractionId);
     return json({ status: "failed", error: "not_configured" }, 503);
   }
 
-  after(() => runExtraction({ supabase, extractionId, provider, apiKey, model }));
+  after(() => runExtraction({ supabase, extractionId, providers }));
   return json({ status: "queued" }, 202);
 }

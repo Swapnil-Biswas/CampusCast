@@ -164,7 +164,7 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
     <section className="exam-up" aria-label="Upload an examination PDF">
       {!aiReady && (
         <p className="form-msg err" role="status">
-          AI reading is not switched on for this server yet (the <code>{keyName}</code> setting is missing). You can still upload, but the document will not be read until it is added.
+          AI reading is not switched on for this server yet (the <code>GEMINI_API_KEY</code> or <code>GROQ_API_KEY</code> setting is missing). You can still upload, but the document will not be read until it is added.
         </p>
       )}
 
