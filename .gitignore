@@ -9,3 +9,6 @@ out/
 
 # local tooling
 .claude/
+
+# test accounts and passwords: never commit
+supabase/local/
