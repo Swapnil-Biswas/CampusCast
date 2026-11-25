@@ -142,3 +142,12 @@ test("a full extraction run works through the Gemini path", async () => {
   assert.equal(notice.category, "ia2");
   assert.equal(notice.status, "draft");
 });
+
+test("a photo is sent to Gemini with its own image type", async () => {
+  const { calls, fetchImpl } = rec(answer(goodRaw()));
+  await call(fetchImpl, { mime: "image/png" });
+  assert.equal(calls[0].body.contents[0].parts[0].inlineData.mimeType, "image/png");
+  const pdfCall = rec(answer(goodRaw()));
+  await call(pdfCall.fetchImpl);
+  assert.equal(pdfCall.calls[0].body.contents[0].parts[0].inlineData.mimeType, "application/pdf");
+});

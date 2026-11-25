@@ -192,6 +192,8 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 3. A central admin makes each staff member an Admin (People & roles), then ticks their departments under **Exam notice access**: **Uploads for** (information staff) and **Approves for** (head of department / cluster head). Or in SQL: `select public.set_admin_depts('<user id>', array['AI & Machine Learning']);` and `select public.set_approver_depts('<user id>', array['AI & Machine Learning']);`. An admin with no departments cannot upload or approve.
 4. Optional: set a student's semester by hand (`profiles.semester`); otherwise it is worked out from their batch (Aug to Jan odd semester, Feb to Jul even).
 
+**PDFs and photos:** a notice can be uploaded as a PDF or as a **JPG, PNG or WebP photo** (for example a circular shared as a picture in a WhatsApp group). Photos are read by Gemini (or Claude); Groq only reads PDFs with text, so it steps aside for photos. HEIC photos are not supported: share or save them as JPG. The file type is judged from the file's own first bytes, never its name.
+
 **How the AI step stays safe**
 - The browser uploads to the private `exam-pdfs` bucket; the server re-checks the file (real PDF, not password-protected, not cut off, 20 MB maximum) and `/api/exams/extract` sends it to Claude in the background. The PDF is sent as a document, so typed and scanned pages are both read.
 - The model must answer through a fixed structure that records, for every detail, whether the PDF states it, whether it was inferred, or whether it is missing, with page numbers and a short quote.
@@ -200,8 +202,8 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Students are notified only when a notice is published.
 
 **Tests**
-- `npm run test:exams`: 133 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
-- `supabase/tests/stage6.mjs`: 118 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
+- `npm run test:exams`: 156 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
+- `supabase/tests/stage6.mjs`: 119 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
 - `supabase/tests/stage7.mjs`: 90 checks of the approver hierarchy, self-approval blocking, notifications to approvers, reminders (windows, duplicates, department and semester matching) and PDF retention.
 
 **Try it for real (checklist)**
@@ -211,6 +213,7 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 4. As a student of that department and semester, open Examinations: see the notice, view and download the PDF, and find the notification. As a student of another department, confirm you see nothing.
 
 **Known limits**
+- A photo can only be as good as the picture: blurry, cropped or very dark photos give uncertain results, flagged "Check". "Special Examination" is only set when the notice's own words say supplementary, practical, laboratory or revaluation; the AI's label alone is not enough.
 - Free tiers: Groq's free limits are small (a long PDF may be refused), it cannot read scanned PDFs, and the PDF text it sees may flatten tables. Both providers send the notice to a third party, so upload only official public notices. Gemini's free tier: rate limited (a busy answer can be retried), PDFs over about 14 MB are refused, and Google may use free-tier content to improve its products, so upload only official public notices. Accuracy on real BMSIT PDFs has not been measured for either provider.
 - Never run against a real Anthropic key, real BMSIT PDFs or a live Supabase when this was written: the logic is tested with fakes and an in-memory Postgres, not end to end.
 - A PDF over 100 pages, or a timetable too long for one answer, is refused with a message asking to split it. Reading runs in the background for up to 5 minutes (`maxDuration`); on a shorter hosting limit, long PDFs can fail and be retried.

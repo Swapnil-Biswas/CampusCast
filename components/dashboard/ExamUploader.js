@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, CloudUpload, FileText, LoaderCircle, RotateCw, TriangleAlert, X } from "lucide-react";
+import { CircleCheck, CloudUpload, FileText, Image as ImageIcon, LoaderCircle, RotateCw, TriangleAlert, X } from "lucide-react";
 import { browserClient } from "../../lib/supabase/client";
 import { supabaseKey, supabaseUrl } from "../../lib/supabase/config";
 import { checkDuplicate, registerExamUpload, retryExtraction } from "../../app/dashboard/admin/exams/actions";
@@ -14,9 +14,16 @@ async function sha256Hex(file) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// A real PDF starts with "%PDF-", whatever the file is called.
-async function looksLikePdf(file) {
-  return new TextDecoder().decode(await file.slice(0, 5).arrayBuffer()) === "%PDF-";
+// What the file really is, judged from its first bytes (never its name): a PDF or a JPEG / PNG / WebP photo.
+// Returns "pdf" | "jpg" | "png" | "webp" (also the extension used for the stored copy) or null.
+async function fileKind(file) {
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const ascii = (from, to) => String.fromCharCode(...b.slice(from, to));
+  if (ascii(0, 5) === "%PDF-") return "pdf";
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "jpg";
+  if (b[0] === 0x89 && ascii(1, 4) === "PNG") return "png";
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "webp";
+  return null;
 }
 
 // Upload straight into the private exam-pdfs bucket with real progress (fetch cannot report upload progress).
@@ -28,7 +35,15 @@ function uploadToStorage(file, path, token, onProgress) {
     xhr.setRequestHeader("authorization", `Bearer ${token}`);
     xhr.setRequestHeader("x-upsert", "false");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status}).`)));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      // Say what storage actually objected to (for example a file type the bucket does not allow yet).
+      let why = "";
+      try { why = String(JSON.parse(xhr.responseText)?.message || "").slice(0, 160); } catch { /* not JSON */ }
+      if (/mime|not supported|not allowed/i.test(why)) return reject(new Error("Supabase storage does not accept this file type yet. Run supabase/dashboard-6-exams.sql in the Supabase SQL Editor (it adds photo support), then try again."));
+      if (/exceeded|too large|size/i.test(why)) return reject(new Error("The file is larger than the storage limit."));
+      reject(new Error(`Upload failed (${xhr.status})${why ? `: ${why}` : "."}`));
+    };
     xhr.onerror = () => reject(new Error("The upload was interrupted. Check your connection and try again."));
     const form = new FormData();   // same shape the Supabase client sends
     form.append("cacheControl", "3600");
@@ -59,6 +74,7 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
   const alive = useRef(true);
   const inputRef = useRef(null);
   const [file, setFile] = useState(null);
+  const [kind, setKind] = useState("pdf");
   const [preview, setPreview] = useState(null);
   const [selected, setSelected] = useState(departments.length === 1 ? [departments[0].name] : []);
   const [over, setOver] = useState(false);
@@ -85,10 +101,12 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
   const pick = async (f) => {
     if (!f || busy) return;
     setError(""); setDups([]); setSummary(null); to("idle");
-    if (!/\.pdf$/i.test(f.name) && f.type !== "application/pdf") return setError("Please choose a PDF file.");
+    if (/\.hei[cf]$/i.test(f.name) || /hei[cf]/i.test(f.type)) return setError("HEIC photos are not supported. Share or save the photo as JPG or PNG and choose that.");
     if (f.size === 0) return setError("That file is empty.");
     if (f.size > MAX_PDF_BYTES) return setError(`That file is ${fmtSize(f.size)}. The limit is ${fmtSize(MAX_PDF_BYTES)}.`);
-    if (!(await looksLikePdf(f))) return setError("That file is not a real PDF, even though it may be named .pdf.");
+    const k = await fileKind(f);
+    if (!k) return setError("Please choose a PDF, or a JPG, PNG or WebP photo of the notice. That file is none of those, even if its name says otherwise.");
+    setKind(k);
     setFile(f);
     setPreview(URL.createObjectURL(f));
   };
@@ -136,7 +154,7 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
       to("uploading");
       const { data: { session } } = await browserClient().auth.getSession();
       if (!session) throw new Error("Your session has expired. Please sign in again.");
-      const path = `${userId}/${crypto.randomUUID()}.pdf`;
+      const path = `${userId}/${crypto.randomUUID()}.${kind}`;
       await uploadToStorage(file, path, session.access_token, setProgress);
       to("saving");
       const reg = await registerExamUpload({ path, filename: file.name, departments: selected, allowDuplicate });
@@ -161,7 +179,7 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
   const step = ORDER[phase === "failed" ? lastPhase.current : phase];
 
   return (
-    <section className="exam-up" aria-label="Upload an examination PDF">
+    <section className="exam-up" aria-label="Upload an examination notice (PDF or photo)">
       {!aiReady && (
         <p className="form-msg err" role="status">
           AI reading is not switched on for this server yet (the <code>GEMINI_API_KEY</code>, <code>OPENROUTER_API_KEY</code> or <code>GROQ_API_KEY</code> setting is missing). You can still upload, but the document will not be read until it is added.
@@ -176,25 +194,27 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
           onDrop={(e) => { e.preventDefault(); setOver(false); pick(e.dataTransfer.files?.[0]); }}
         >
           <CloudUpload size={34} aria-hidden="true" />
-          <b>Drop an official examination PDF here</b>
-          <span>or <u>browse files</u> · PDF only, up to {fmtSize(MAX_PDF_BYTES)} · typed or scanned</span>
-          <input ref={inputRef} type="file" accept="application/pdf,.pdf" onChange={(e) => pick(e.target.files?.[0])} />
+          <b>Drop an official examination PDF or photo here</b>
+          <span>or <u>browse files</u> · PDF, or a JPG / PNG / WebP photo (for example one shared on WhatsApp) · up to {fmtSize(MAX_PDF_BYTES)}</span>
+          <input ref={inputRef} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp" onChange={(e) => pick(e.target.files?.[0])} />
         </label>
       )}
 
       {file && (
         <div className="dz-card">
           <div className="dz-file">
-            <FileText size={28} aria-hidden="true" />
-            <div><b>{file.name}</b><small>{fmtSize(file.size)} · PDF</small></div>
+            {kind === "pdf" ? <FileText size={28} aria-hidden="true" /> : <ImageIcon size={28} aria-hidden="true" />}
+            <div><b>{file.name}</b><small>{fmtSize(file.size)} · {kind === "pdf" ? "PDF" : "Photo"}</small></div>
             {!busy && phase !== "done" && <button type="button" className="icon-btn" onClick={reset} aria-label="Remove this file"><X size={18} /></button>}
           </div>
 
           {phase === "idle" && (
             <>
               <details className="dz-preview">
-                <summary>Preview the PDF</summary>
-                {preview && <object data={preview} type="application/pdf" aria-label="PDF preview"><a href={preview} target="_blank" rel="noopener noreferrer">Open the PDF in a new tab</a></object>}
+                <summary>{kind === "pdf" ? "Preview the PDF" : "Preview the photo"}</summary>
+                {preview && (kind === "pdf"
+                  ? <object data={preview} type="application/pdf" aria-label="PDF preview"><a href={preview} target="_blank" rel="noopener noreferrer">Open the PDF in a new tab</a></object>
+                  : <img src={preview} alt="The photo you chose" />)}
               </details>
 
               <fieldset className="dz-depts">
@@ -215,7 +235,7 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
               )}
 
               <div className="dz-actions">
-                <button type="button" className="btn" onClick={() => go(false)} disabled={!selected.length}>Upload and read the PDF</button>
+                <button type="button" className="btn" onClick={() => go(false)} disabled={!selected.length}>{kind === "pdf" ? "Upload and read the PDF" : "Upload and read the photo"}</button>
                 <button type="button" className="btn-s ghost" onClick={reset}>Replace file</button>
               </div>
             </>
@@ -248,9 +268,9 @@ export default function ExamUploader({ userId, departments, aiReady, keyName = "
 
               {phase === "done" && summary && (
                 <div className="form-msg" role="status">
-                  <p><b>Done. The PDF was read and saved as a draft.</b> Nothing is published: a person checks everything first.</p>
+                  <p><b>Done. The {kind === "pdf" ? "PDF" : "photo"} was read and saved as a draft.</b> Nothing is published: a person checks everything first.</p>
                   <ul>
-                    <li>{summary.category ? <>Category: <b>{summary.category}</b>{summary.original && <> (the PDF says &ldquo;{summary.original}&rdquo;)</>}</> : <b>Category not clear in the PDF: requires admin review.</b>}</li>
+                    <li>{summary.category ? <>Category: <b>{summary.category}</b>{summary.original && <> (the notice says &ldquo;{summary.original}&rdquo;)</>}</> : <b>Category not clear in the notice: requires admin review.</b>}</li>
                     {summary.title && <li>Title: {summary.title}</li>}
                     <li>{summary.rows} timetable row{summary.rows === 1 ? "" : "s"} found{summary.rowsToCheck ? `, ${summary.rowsToCheck} to check` : ""}</li>
                     <li>{summary.fieldsToCheck} detail{summary.fieldsToCheck === 1 ? "" : "s"} marked for checking</li>
