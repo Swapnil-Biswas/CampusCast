@@ -301,3 +301,14 @@
 .rv-img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: var(--soft); }
 @media (min-width: 1080px) { .rv-img { max-height: calc(100vh - 110px); } }
 .dz-preview img { display: block; max-width: 100%; max-height: 420px; margin: 8px auto 0; border-radius: 10px; border: 1px solid var(--line); }
+
+/* hackathon editor */
+.rv-prize { display: grid; grid-template-columns: 1.2fr .8fr 1.4fr auto; gap: 8px; align-items: center; }
+.rv-sched { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) 2fr 1.4fr auto; gap: 8px; align-items: center; padding: 6px; border-radius: 10px; }
+.rv-sched.chk-row { background: #fff8e6; }
+.rv-sched .chk { grid-column: 1 / -1; justify-self: start; }
+.rv-prize input, .rv-sched input { min-width: 0; width: 100%; font-size: 14px; }
+.chips-line { display: inline-flex; align-items: center; gap: 8px; }
+.rv-card .warn { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.rv-card .warn li { display: flex; gap: 6px; align-items: flex-start; }
+@media (max-width: 720px) { .rv-prize, .rv-sched { grid-template-columns: 1fr auto; } .rv-prize input:nth-child(-n+3), .rv-sched input { grid-column: 1 / -1; } }

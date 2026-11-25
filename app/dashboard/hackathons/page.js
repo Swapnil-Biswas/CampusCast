@@ -37,7 +37,7 @@ export default async function Hackathons({ searchParams }) {
     <>
       <div className="page-head">
         <div><h1>Hackathons</h1><p>Filter by theme and mode, watch the deadline countdown, set a reminder, and find teammates.</p></div>
-        {canPublish && <RecordEditor table="hackathons" clubs={clubs || []} userId={user.id} isAdmin={isAdmin} big />}
+        {canPublish && <Link className="btn" href="/dashboard/hackathons/manage">Post a hackathon</Link>}
       </div>
 
       <form className="filters" method="get" role="search" aria-label="Filter hackathons">
