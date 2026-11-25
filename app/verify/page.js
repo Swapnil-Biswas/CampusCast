@@ -16,12 +16,19 @@ export default async function VerifyPage() {
   const user = await getUser();
   if (!user) redirect("/signin");
 
-  const [{ profile, setupMissing }, collegeEmail] = await Promise.all([getProfile(supabase, user.id), isCollegeEmail(supabase, user.email)]);
+  const [{ profile, setupMissing, unreachable }, collegeEmail] = await Promise.all([getProfile(supabase, user.id), isCollegeEmail(supabase, user.email)]);
   const status = profile?.status ?? "unverified";
   const detected = parseStudentEmail(user.email);
 
   let body;
-  if (!collegeEmail) {
+  if (unreachable) {
+    body = (
+      <>
+        <h1 className="display">Can&apos;t reach the <em>server</em>.</h1>
+        <p className="form-msg err">CampusCast couldn&apos;t connect to its database just now. Check your internet connection and reload the page in a moment.</p>
+      </>
+    );
+  } else if (!collegeEmail) {
     body = (
       <>
         <h1 className="display">Wrong <em>email</em>.</h1>

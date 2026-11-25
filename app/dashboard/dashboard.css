@@ -174,3 +174,125 @@
 .skel { border-radius: 14px; background: linear-gradient(90deg, rgba(0,0,0,.06), rgba(0,0,0,.12), rgba(0,0,0,.06)); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
 @keyframes skel { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+/* ===== Exam notices: PDF upload and extraction status ===== */
+.sub-h { font-family: var(--font-d); font-size: 22px; margin: 28px 0 12px; letter-spacing: -.01em; }
+.exam-up { display: grid; gap: 14px; max-width: 860px; }
+.exam-up code { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 0 5px; }
+.drop { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; padding: 38px 18px; cursor: pointer;
+  background: var(--card); border: 2px dashed color-mix(in srgb, var(--ink) 35%, transparent); border-radius: 16px; transition: background .15s, border-color .15s; }
+.drop:hover, .drop.over, .drop:focus-within { background: var(--soft); border-color: var(--clay); }
+.drop b { font-size: 17px; }
+.drop span { opacity: .7; font-size: 14px; }
+.drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.dz-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; }
+.dz-file { display: flex; align-items: center; gap: 12px; }
+.dz-file > div { flex: 1; min-width: 0; }
+.dz-file b { display: block; overflow-wrap: anywhere; }
+.dz-file small { opacity: .65; }
+.dz-preview summary { cursor: pointer; font-weight: 600; }
+.dz-preview object { width: 100%; height: min(70vh, 560px); margin-top: 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+.dz-depts { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dz-depts legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding: 0; }
+.dz-depts .chip { position: relative; cursor: pointer; flex-wrap: wrap; color: var(--ink); }
+.dz-depts .chip.on { color: var(--cream); }
+.dz-depts .chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.dz-depts .chip:focus-within { outline: 3px solid var(--clay); outline-offset: 2px; }
+.dz-depts .chip small { opacity: .6; font-size: 12px; }
+.dz-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.steps li { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; opacity: .55; }
+.steps li span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line); font-size: 12px; background: var(--soft); }
+.steps li.now, .steps li.done, .steps li.bad { opacity: 1; font-weight: 600; }
+.steps li.done span { background: #7fb48a; border-color: #4f8a5e; color: #fff; }
+.steps li.now span { border-color: var(--clay); }
+.steps li.bad span { background: var(--clay); border-color: var(--clay); color: #fff; }
+.progress { position: relative; height: 14px; border-radius: 999px; background: var(--soft); border: 1.5px solid var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--clay); transition: width .2s; }
+.progress small { position: absolute; right: 8px; top: -2px; font-size: 11px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .progress i { transition: none; } }
+.form-msg ul { margin: 8px 0 0; padding-left: 18px; }
+.form-msg ul.warn { list-style: none; padding-left: 0; }
+.form-msg ul.warn li { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; }
+.row-actions { white-space: nowrap; text-align: right; }
+@media (max-width: 720px) { .drop { padding: 26px 14px; } .steps { gap: 6px 12px; } .dz-actions .btn { width: 100%; } }
+
+/* exam notice review */
+.back-link { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 14px; opacity: .8; text-decoration: none; color: inherit; }
+.back-link:hover { opacity: 1; text-decoration: underline; }
+.rv { display: grid; gap: 14px; }
+.rv-grid { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 1080px) { .rv-grid { grid-template-columns: minmax(340px, 5fr) minmax(0, 7fr); } .rv-pdf { position: sticky; top: 12px; } .rv-pdf iframe { height: calc(100vh - 110px); } }
+.rv-pdf { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; overflow: hidden; }
+.rv-pdf-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.rv-pdf-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-pdf iframe { display: block; width: 100%; height: 480px; border: 0; background: var(--soft); }
+.rv-form { display: grid; gap: 14px; min-width: 0; }
+.rv-fs { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 14px; }
+.rv-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+.rv-card h2 { font-family: var(--font-d); font-size: 20px; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+.rv-card h2 small { font: 400 13px var(--font-b, inherit); opacity: .65; }
+.rv-two { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.rv .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.rv .chip { color: var(--ink); cursor: pointer; }
+.rv .chip.on { color: var(--cream); }
+.rv .field input, .rv .field select, .rv .field textarea { max-width: 100%; }
+.rv-fs:disabled .chip { cursor: default; }
+.chk { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #fdebc3; border: 1px solid #d99a1d; color: #5a3d00; vertical-align: middle; }
+.rv-tt input, .rv-tt select { min-width: 0; width: 100%; font-size: 13px; padding: 5px 6px; }
+.rv-tt td:nth-child(3) input { min-width: 170px; }
+.rv-tt td:nth-child(9) input { min-width: 130px; }
+.rv-tt input[type="date"] { min-width: 130px; }
+.rv-tt input[type="time"] { min-width: 96px; }
+.rv-tt tr.chk-row { background: #fff8e6; }
+.rv-date { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+.rv-bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; padding: 10px 12px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); }
+.rv-bar .inline-msg { margin-right: auto; }
+.rv-hist { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.rv-hist li { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.rv-hist p { margin: 4px 0 0; opacity: .8; }
+@media (max-width: 720px) { .rv-date { grid-template-columns: 1fr auto; } .rv-date input[type="text"] { grid-column: 1 / -1; } .rv-bar .btn, .rv-bar .btn-s { flex: 1; justify-content: center; } }
+.rv-tt td:nth-child(2) select { min-width: 54px; }
+.rv-tt td:nth-child(4) input { min-width: 88px; }
+.rv-tt td:nth-child(1) select { min-width: 120px; }
+
+/* exam approvals */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat-tile { display: grid; gap: 2px; padding: 10px 14px; border: 1.5px solid var(--line); border-left: 6px solid var(--c); border-radius: 12px; background: var(--card); color: var(--ink); text-decoration: none; }
+.stat-tile b { font-family: var(--font-d); font-size: 26px; line-height: 1; }
+.stat-tile span { font-size: 13px; opacity: .75; }
+.stat-tile.on { border-color: var(--ink); border-left-color: var(--c); box-shadow: 3px 3px 0 var(--ink); }
+.rv-decide { border-color: var(--ink); }
+
+/* student examinations */
+.filters .chip small { opacity: .7; margin-left: 2px; }
+.exam-notice { display: grid; gap: 12px; }
+.exam-notice.over { opacity: .8; }
+.exam-notice .doc-actions { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.exam-tt tr.past { opacity: .55; }
+.exam-dates { margin: 0; padding-left: 18px; }
+.exam-guide { border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--card); }
+.exam-guide summary { font-weight: 600; cursor: pointer; }
+.exam-guide ul { margin: 8px 0 0; padding-left: 18px; }
+
+/* exam countdown */
+.exam-cd { background: var(--board); color: var(--cream); border-radius: 14px; padding: 12px 16px; display: grid; gap: 10px; }
+.exam-cd-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 14px; }
+.exam-cd-head small { margin-left: auto; opacity: .75; }
+.exam-cd-clock { display: flex; gap: 6px; flex-wrap: nowrap; align-items: stretch; }
+.exam-cd-box { position: relative; flex: 1 1 0; min-width: 0; max-width: 110px; text-align: center; background: rgba(255, 255, 255, .08); border-radius: 10px; padding: 8px 4px 6px; }
+.exam-cd-box b { display: block; font-family: var(--font-d); font-size: clamp(24px, 6vw, 38px); line-height: 1; color: var(--mustard); font-variant-numeric: tabular-nums; }
+.exam-cd-box span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .75; margin-top: 4px; }
+.exam-cd-box i { display: none; }
+.exam-cd.live { background: #2f7a4a; }
+.exam-cd-live { margin: 0; font-weight: 700; }
+
+/* exam access (people page) */
+.acc-group { border: 0; padding: 0; margin: 0 0 10px; min-width: 0; }
+.acc-group legend { font-weight: 600; font-size: 13px; padding: 0; }
+.acc-group small { display: block; opacity: .65; margin-bottom: 4px; }
+.acc-group .chip { color: var(--ink); cursor: pointer; padding: 3px 10px; font-size: 13px; }
+.acc-group .chip.on { color: var(--cream); }
+.acc-group .chips { display: flex; flex-wrap: wrap; gap: 6px; }
