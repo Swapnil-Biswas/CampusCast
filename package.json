@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:exams": "node --test \"tests/exams/*.test.mjs\""
+    "test:exams": "node --test \"tests/exams/*.test.mjs\"",
+    "test:hackathons": "node --test \"tests/hackathons/*.test.mjs\""
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.2",
