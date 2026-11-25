@@ -296,3 +296,21 @@
 .acc-group .chip { color: var(--ink); cursor: pointer; padding: 3px 10px; font-size: 13px; }
 .acc-group .chip.on { color: var(--cream); }
 .acc-group .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Connect: people directory and profiles */
+.people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.person-card { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.person-link { display: flex; gap: 12px; align-items: center; text-decoration: none; }
+.person-main { display: flex; flex-direction: column; min-width: 0; }
+.person-main small, .person-head small { opacity: .7; }
+.person-headline { margin: 0; }
+.avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--mustard, #f3b63f); color: var(--ink); font-weight: 800; font-family: var(--font-d); }
+.avatar.big { width: 72px; height: 72px; font-size: 26px; }
+.person-head { display: flex; gap: 16px; align-items: center; }
+.person-section { margin: 18px 0; }
+.person-section h2 { font-size: 17px; margin: 0 0 6px; font-family: var(--font-d); }
+.person-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.person-list li { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.connect-nav { margin-bottom: 8px; }
+.connect-form { max-width: 640px; display: grid; gap: 14px; }
+.connect-form .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }

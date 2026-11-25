@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:exams": "node --test \"tests/exams/*.test.mjs\""
+    "test:exams": "node --test \"tests/exams/*.test.mjs\"",
+    "test:connect": "node --test \"tests/connect/*.test.mjs\""
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.2",
@@ -23,6 +24,7 @@
     "web-push": "^4.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
     "pg": "^8.23.1"
   }
 }

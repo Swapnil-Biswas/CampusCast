@@ -148,7 +148,7 @@ Signed-in, ID-verified students land on `/dashboard`. Everything is stored in Su
 | --- | --- |
 | Home feed, Saved, Calendar | Notices ranked Now > Today > Soon > FYI, filters, search, read receipts, acknowledgement of Now notices, bookmarks, reminders, `.ics` download |
 | Official | Department circulars, exams (any change is re-announced as Now), workshops with seat cap, waitlist and CSV export, hackathons, cultural events and clubs |
-| Community | Connect (teammates), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
+| Community | Connect (teammates, student and faculty profiles linked to LinkedIn), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
 | Admin | Publish notices (scheduled, expiring, audience preview), reach analytics, ID verification, moderation, people and roles, clubs, audit log |
 | Alerts | Live in-app bell, email for Now/Today notices and reminders, browser push, daily 7 am digest, quiet hours |
 
@@ -218,3 +218,25 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Timetable rows without a department or semester apply to everyone the notice is for.
 - The older `exams` table is kept only for reading under "Earlier postings"; new exam information goes through the approval path.
 - Changing a published notice means archiving it and submitting a new one; there is no edit-after-publish.
+
+## Connect: student and faculty profiles
+
+Connect has two halves. **Teammates** is the original board for finding people for a project or hackathon. **Students** and **Faculty** are a directory of profiles, so students can see what others are good at and what each professor researches and where their career is going. A profile points to **LinkedIn** for any further contact: there is no chat inside CampusCast.
+
+| Page | What it does |
+|---|---|
+| Dashboard > Connect > **Students** / **Faculty** | Directory with search (name, headline, skills, interests, research areas), department filter and a skill / research-area filter, 24 per page. |
+| `/dashboard/connect/people/<id>` | One profile. **Students:** skills, interests, goals, achievements. **Faculty:** designation, research areas, research papers (with links), related work (projects, grants, talks), career path, what they are open to. Both: a **Message on LinkedIn** button that opens in a new tab, optional GitHub and website, and Report / Block. |
+| Dashboard > Connect > **My profile** | Edit your own profile and switch visibility on or off. Faculty see the faculty fields. |
+
+**Privacy:** a profile is **hidden until its owner switches visibility on**. Only signed-in, ID-verified college users can see anyone (the college-email rule is enforced at sign-up), and a blocked pair never sees each other. Admins get no extra view of a hidden profile. A person's college email is shown only if they tick *Also show my college email*; **no phone number is collected at all**, and the USN, ID card and review notes are never returned. Other people are read only through two database functions (`people_directory`, `person_profile`) that return a fixed set of fields. Nothing is invented: a section with no content is not shown, and an empty profile says so.
+
+**Student or faculty:** `profiles.person_type` is `student` by default. Only a **super-admin** can change it (Dashboard > Admin > People & roles > *Connect* column), and the change is written to the audit log, so nobody can present themselves as faculty. Faculty-only fields are emptied by the database for anyone who is not faculty.
+
+**LinkedIn and other links:** an address must be `https`, on `linkedin.com` (or a country site such as `in.linkedin.com`), and look like `/in/<name>`. It is saved in one tidy form, `https://www.linkedin.com/in/<name>`, with tracking parameters removed. `http`, `javascript:`, look-alike hosts (`linkedin.com.evil.example`), `user@host` tricks, ports and company pages are refused with a message. GitHub must be `github.com/<name>`. A website or paper link must be `https` with a real host name (no `localhost`, IP addresses or `.local`). The same rules are enforced again by the database. External links open with `rel="noopener noreferrer nofollow"`.
+
+**Setup:** run `supabase/dashboard-9-connect-people.sql` in the Supabase SQL Editor (after `setup.sql` and dashboard-1, -4 and -6; safe to re-run). Mark a professor as faculty in People & roles (a super-admin), then ask them to fill in their profile.
+
+**Tests:** `npm run test:connect` (link and profile validation) and `node supabase/tests/stage9.mjs` (81 database checks: opt-in, blocks, no leaked email or USN, who may set faculty, link and size constraints, search and filters). `node supabase/tests/runtest.mjs supabase/tests/stage9.mjs` runs the same checks on an in-memory Postgres (PGlite, `npm install` first) with no database password.
+
+**Known limits:** no profile photo (an initials avatar is shown), no in-app messaging, and a faculty member who is not yet ID-verified cannot appear because only verified accounts are listed.

@@ -10,7 +10,12 @@ export default async function People({ searchParams }) {
   const { supabase, user } = await requireSuper();
   let query = supabase.from("profiles").select("id,email,full_name,branch,year,status,role").order("role", { ascending: false }).order("full_name").limit(100);
   if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,usn.ilike.%${q}%`);
-  const { data, error } = await query;
+  const { data: rows, error } = await query;
+  // Student or faculty (Connect profiles). Read separately so this page still works before dashboard-9 has been run.
+  const ids = (rows || []).map((r) => r.id);
+  const { data: types } = ids.length ? await supabase.from("profiles").select("id,person_type").in("id", ids) : { data: [] };
+  const typeOf = new Map((types || []).map((t) => [t.id, t.person_type]));
+  const data = (rows || []).map((r) => ({ ...r, person_type: typeOf.get(r.id) }));
 
   // Exam notice access for everyone who is an admin (kept separate from the search above).
   const { data: depts } = await supabase.from("departments").select("name, code").eq("active", true).order("sort");
@@ -22,7 +27,7 @@ export default async function People({ searchParams }) {
       {error && <p className="form-msg err">{error.message}</p>}
       <div className="table-wrap">
         <table className="tbl">
-          <thead><tr><th>Student</th><th>Branch</th><th>Status</th><th>Role</th></tr></thead>
+          <thead><tr><th>Student</th><th>Branch</th><th>Status</th><th>Role</th><th>Connect</th></tr></thead>
           <tbody>{(data || []).map((p) => <RoleRow key={p.id} p={p} self={p.id === user.id} />)}</tbody>
         </table>
       </div>
