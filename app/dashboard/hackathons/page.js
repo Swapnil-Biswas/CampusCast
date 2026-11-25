@@ -3,6 +3,7 @@ import { CalendarClock, ExternalLink, MapPin, Trophy, Users, Wallet } from "luci
 import { getPublisher } from "../../../lib/dash/ctx";
 import { fmtRange, formatRupees, hackathonPhase, ms, sortHackathons } from "../../../lib/hackathons/status";
 import { CAMPUS, formatKm } from "../../../lib/hackathons/geo";
+import { organiserLine } from "../../../lib/hackathons/organiser";
 import Countdown from "../../../components/dashboard/Countdown";
 import { InterestButton } from "../../../components/dashboard/OfficialActions";
 
@@ -14,7 +15,7 @@ const WHEN = { active: "Upcoming and live", ended: "Ended or cancelled", all: "A
 export default async function Hackathons({ searchParams }) {
   const sp = await searchParams;
   const one = (v) => (Array.isArray(v) ? v[0] : v) || "";
-  const f = { q: one(sp.q).trim().slice(0, 60), theme: one(sp.theme), mode: one(sp.mode), when: Object.hasOwn(WHEN, one(sp.when)) ? one(sp.when) : "active" };
+  const f = { q: one(sp.q).trim().slice(0, 60), by: one(sp.by).slice(0, 40), theme: one(sp.theme), mode: one(sp.mode), when: Object.hasOwn(WHEN, one(sp.when)) ? one(sp.when) : "active" };
   const { supabase, user, canPublish } = await getPublisher();
   const nowMs = Date.now();
 
@@ -27,11 +28,15 @@ export default async function Hackathons({ searchParams }) {
   const mineSet = new Set((mine || []).map((m) => m.hackathon_id));
   const all = (data || []).map((h) => ({ ...h, phase: hackathonPhase(h, nowMs) }));
   const themeList = [...new Set(all.map((h) => h.theme).filter(Boolean))].sort();
+  // "Organised by": the clubs that have posted something, and everything from other colleges
+  const clubList = [...new Map(all.filter((h) => h.club_id && h.club?.name).map((h) => [h.club_id, h.club.name])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const hasOutside = all.some((h) => !h.club_id);
 
   const needle = f.q.toLowerCase();
   const shown = sortHackathons(all.filter((h) => {
     if (f.mode && h.mode !== f.mode) return false;
     if (f.theme && h.theme !== f.theme) return false;
+    if (f.by === "outside" ? Boolean(h.club_id) : f.by && h.club_id !== f.by) return false;
     const over = ["ended", "cancelled"].includes(h.phase.key);
     if (f.when === "active" && over) return false;
     if (f.when === "ended" && !over) return false;
@@ -39,7 +44,7 @@ export default async function Hackathons({ searchParams }) {
     return true;
   }), nowMs);
   const live = all.filter((h) => h.phase.key === "live").length;
-  const filtered = f.q || f.theme || f.mode || f.when !== "active";
+  const filtered = f.q || f.by || f.theme || f.mode || f.when !== "active";
 
   return (
     <>
@@ -53,6 +58,7 @@ export default async function Hackathons({ searchParams }) {
 
       <form className="filters" method="get" role="search" aria-label="Find hackathons">
         <label className="sel"><span>Search</span><input name="q" defaultValue={f.q} placeholder="Name, club or theme" /></label>
+        <label className="sel"><span>Organised by</span><select name="by" defaultValue={f.by}><option value="">Everyone</option>{clubList.map(([id, name]) => <option key={id} value={id}>{name}</option>)}{hasOutside && <option value="outside">Other colleges</option>}</select></label>
         <label className="sel"><span>Theme</span><select name="theme" defaultValue={f.theme}><option value="">All</option>{themeList.map((t) => <option key={t}>{t}</option>)}</select></label>
         <label className="sel"><span>Mode</span><select name="mode" defaultValue={f.mode}><option value="">All</option>{Object.entries(MODES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
         <label className="sel"><span>Show</span><select name="when" defaultValue={f.when}>{Object.entries(WHEN).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
@@ -66,7 +72,7 @@ export default async function Hackathons({ searchParams }) {
           const p = h.phase;
           const poster = (h.docs || []).filter((d) => d.mime_type?.startsWith("image/")).sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
           const prize = formatRupees(h.prize_amount);
-          const organizer = h.club?.name || h.organizer_name;
+          const organizer = organiserLine(h);
           const canRegister = h.link && ["open", "closing"].includes(p.key);
           return (
             <article key={h.id} className={`notice hk-card${["ended", "cancelled"].includes(p.key) ? " over" : ""}`} style={{ "--u": PHASE_COLOR[p.key] }}>

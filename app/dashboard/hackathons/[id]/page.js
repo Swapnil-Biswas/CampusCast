@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarPlus, ExternalLink, FileText, Globe, Mail, MapPin, M
 import { getPublisher } from "../../../../lib/dash/ctx";
 import { isUuid } from "../../../../lib/hackathons/validate";
 import { fmtDateTime, fmtRange, formatRupees, hackathonPhase, telLink, waLink } from "../../../../lib/hackathons/status";
+import { organiserLine } from "../../../../lib/hackathons/organiser";
 import { CAMPUS, directionsUrl, formatKm, osmDirectionsUrl, osmEmbedUrl, placeUrl, routeSummary } from "../../../../lib/hackathons/geo";
 import Countdown from "../../../../components/dashboard/Countdown";
 import ScheduleTimeline from "../../../../components/dashboard/ScheduleTimeline";
@@ -38,7 +39,7 @@ export default async function HackathonDetail({ params }) {
   const docs = [...(h.docs || [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const poster = docs.find((d) => d.mime_type?.startsWith("image/"));
   const brochures = docs.filter((d) => d.mime_type === "application/pdf");
-  const organizer = h.club?.name || h.organizer_name;
+  const organizer = organiserLine(h);
   const prize = formatRupees(h.prize_amount);
   const mainLink = h.website_url || h.link;
   const d = h.details || {};
@@ -68,7 +69,7 @@ export default async function HackathonDetail({ params }) {
           </div>
           <h1>{h.title}</h1>
           {h.tagline && <p className="hk-tagline">{h.tagline}</p>}
-          {organizer && <p className="audience">Organised by {organizer}</p>}
+          {organizer && <p className="audience">Organised by {organizer}{!h.club_id && " (another college or organisation)"}</p>}
 
           {p.target && <Countdown target={p.target.at} label={p.target.label} tone={p.key} detail={fmtDateTime(new Date(p.target.at).toISOString())} />}
           {!p.target && p.key === "live" && <p className="form-msg" role="status">It is happening right now.</p>}

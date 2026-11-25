@@ -226,3 +226,21 @@ create policy "Remove hackathon files" on storage.objects for delete to authenti
     public.is_admin()
     or ((storage.foldername(name))[1] = auth.uid()::text and public.can_publish_hackathons())
   ));
+
+-- ============================================================
+-- 5. The college's clubs, societies and chapters (the usual organisers of hackathons)
+-- ============================================================
+-- Added if they are not there yet (matched by name or address), so this is safe to run again. Coding Club already exists
+-- from dashboard-1. A person becomes an admin of a club (and may then post its hackathons) when a central admin adds them
+-- to club_admins. A hackathon by another college has no club: choose "Out of college" in the editor and type its name.
+insert into public.clubs (name, slug, color)
+select c.name, trim(both '-' from regexp_replace(lower(c.name), '[^a-z0-9]+', '-', 'g')), (array['#8ec5d6', '#e8603c', '#c58ad1', '#f3b63f', '#7fb48a', '#ffb8c6'])[1 + (c.n % 6)]
+from (values
+  (1, 'Coding Club'), (2, 'GenAI Club'), (3, 'OSCode Club'), (4, 'ASTRA Club'), (5, 'AR/VR Hub'), (6, 'E-Yantra Club'),
+  (7, 'IEEE Computer Society'), (8, 'IEEE Robotics and Automation Society'), (9, 'IEEE Computational Intelligence Society'),
+  (10, 'IEEE Signal Processing Society'), (11, 'IEEE Communications Society'), (12, 'IEEE Aerospace and Electronic Systems Society'),
+  (13, 'IEEE Circuits and Systems Society'), (14, 'IETE Club'), (15, 'ISTE Club'), (16, 'BMESI Club'), (17, 'ICE Student Chapter'),
+  (18, 'Motorheads Club'), (19, 'Access Denied Club'), (20, 'Money Plant Club'), (21, 'Alterino Club'), (22, 'Epoch Society'),
+  (23, 'NODE – Network of Decentralised Engineers')
+) as c(n, name)
+on conflict do nothing;

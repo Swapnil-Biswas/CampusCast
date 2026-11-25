@@ -35,6 +35,15 @@ await run("Stage 8: hackathons (details, documents, access)", async (t) => {
   t.check("students still see it", (await ids(stu)).includes(old.id));
   t.check("its registration deadline is also its 'closes' time", (await t.admin("select registration_closes = deadline ok from public.hackathons where id = $1", [old.id])).rows[0].ok);
 
+  // ---------- the college's clubs are there ----------
+  const wanted = ["Coding Club", "GenAI Club", "OSCode Club", "ASTRA Club", "AR/VR Hub", "E-Yantra Club", "IEEE Computer Society", "IEEE Robotics and Automation Society", "IEEE Computational Intelligence Society", "IEEE Signal Processing Society", "IEEE Communications Society", "IEEE Aerospace and Electronic Systems Society", "IEEE Circuits and Systems Society", "IETE Club", "ISTE Club", "BMESI Club", "ICE Student Chapter", "Motorheads Club", "Access Denied Club", "Money Plant Club", "Alterino Club", "Epoch Society", "NODE – Network of Decentralised Engineers"];
+  const have = (await t.admin("select name, count(*)::int n from public.clubs where name = any($1) group by name", [wanted])).rows;
+  t.check("all 23 of the college's clubs exist", have.length === 23, `${have.length} found`);
+  t.check("each club exists exactly once (Coding Club was already there)", have.every((r) => r.n === 1));
+  t.check("students can read the club list", (await t.as(stu, "select count(*)::int n from public.clubs where name = any($1)", [wanted])).rows[0].n === 23);
+  t.check("a student cannot add or rename a club", !!(await t.as(stu, "insert into public.clubs (name, slug) values ('Fake Club', 'fake-club')")).error);
+  t.check("the club slugs are clean web names", (await t.admin("select count(*)::int n from public.clubs where name = any($1) and slug !~ '^[a-z0-9]+(-[a-z0-9]+)*$'", [wanted])).rows[0].n === 0);
+
   // ---------- who can post ----------
   const d1 = await mk(clubA);
   t.check("a club admin can create a draft for their own club", !d1.error, d1.error);

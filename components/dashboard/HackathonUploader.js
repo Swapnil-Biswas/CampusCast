@@ -6,6 +6,7 @@ import { CircleCheck, CloudUpload, FileText, Image as ImageIcon, LoaderCircle, P
 import { browserClient } from "../../lib/supabase/client";
 import { checkHackathonDuplicate, createBlankHackathon, registerHackathonUpload, retryHackathonExtraction } from "../../app/dashboard/hackathons/manage/actions";
 import { MAX_PDF_BYTES, STALE_PROCESSING_MS } from "../../lib/exams/constants";
+import { OUT_OF_COLLEGE } from "../../lib/hackathons/organiser";
 import { fileKind, fmtSize, sha256Hex, uploadToStorage } from "./uploadHelpers";
 
 const STEPS = [["uploading", "Upload"], ["saving", "Check file"], ["reading", "Read with AI"], ["done", "Ready to review"]];
@@ -120,9 +121,9 @@ export default function HackathonUploader({ userId, clubs, isAdmin, aiReady }) {
   const step = ORDER[phase === "failed" ? lastPhase.current : phase];
   const clubPicker = (
     <label className="field">
-      <span className="lab">Which club or organisation is hosting it?</span>
+      <span className="lab">Which club is hosting it? {isAdmin && <small>(Another college? Choose “Out of college”.)</small>}</span>
       <select value={clubId} onChange={(e) => setClubId(e.target.value)} aria-label="Organising club">
-        {(isAdmin || clubs.length !== 1) && <option value="">{isAdmin ? "Another organiser (type the name later)" : "Choose your club"}</option>}
+        {(isAdmin || clubs.length !== 1) && <option value="">{isAdmin ? OUT_OF_COLLEGE : "Choose your club"}</option>}
         {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
     </label>
@@ -150,7 +151,7 @@ export default function HackathonUploader({ userId, clubs, isAdmin, aiReady }) {
           <div className="dz-actions">
             <button type="button" className="btn-s" onClick={blank}><Plus size={14} /> Or start with an empty form</button>
             {clubs.length > 1 || isAdmin ? <span className="inline-msg">Club: </span> : null}
-            {(clubs.length > 1 || isAdmin) && <select value={clubId} onChange={(e) => setClubId(e.target.value)} aria-label="Club for the empty form">{isAdmin && <option value="">Another organiser</option>}{!isAdmin && <option value="">Choose your club</option>}{clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
+            {(clubs.length > 1 || isAdmin) && <select value={clubId} onChange={(e) => setClubId(e.target.value)} aria-label="Club for the empty form">{isAdmin && <option value="">{OUT_OF_COLLEGE}</option>}{!isAdmin && <option value="">Choose your club</option>}{clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
           </div>
         </>
       )}

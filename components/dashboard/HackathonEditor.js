@@ -5,6 +5,7 @@ import { AlertTriangle, ExternalLink, LoaderCircle, Megaphone, Plus, Save, Trash
 import { removeHackathon, saveHackathon, setHackathonStatus } from "../../app/dashboard/hackathons/manage/actions";
 import { publishIssues, toLocalInput, validateHackathon } from "../../lib/hackathons/validate";
 import HackathonLocationPicker from "./HackathonLocationPicker";
+import { OUT_OF_COLLEGE, isIeee, organiserAfterClubChange } from "../../lib/hackathons/organiser";
 
 const MODES = [["offline", "On campus / in person"], ["online", "Online"], ["hybrid", "Hybrid"]];
 const STATUS = { draft: ["Draft: only you can see it", "#d9c8a8"], published: ["Published: students can see it", "#7fb48a"], cancelled: ["Cancelled: students see it as cancelled", "#e8603c"] };
@@ -43,6 +44,12 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState(null);
 
+  // Choosing a club fills the organiser with the club's name (not for IEEE societies); a name that was typed is kept.
+  const pickClub = (id) => {
+    const prev = clubs.find((c) => c.id === f.clubId) || null, next = clubs.find((c) => c.id === id) || null;
+    setF((s) => ({ ...s, clubId: id, organizerName: organiserAfterClubChange(s.organizerName, prev, next) }));
+    setTouched((t) => ({ ...t, clubId: true, organizerName: true })); setDirty(true); setMsg(null);
+  };
   const set = (key, value) => { setF((s) => ({ ...s, [key]: value })); setTouched((t) => ({ ...t, [key]: true })); setDirty(true); setMsg(null); };
   const flagged = (key) => autofilled && !touched[key] && META[key] && meta?.[META[key]]?.needsReview;
   const Badge = ({ k }) => flagged(k)
@@ -119,11 +126,12 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
               <div className="field"><label htmlFor="hk-tag">Tagline <Badge k="tagline" /></label><input id="hk-tag" type="text" value={f.tagline} maxLength={160} onChange={(e) => set("tagline", e.target.value)} /></div>
               <div className="rv-two">
                 <div className="field"><label htmlFor="hk-club">Organising club <Badge k="clubId" /></label>
-                  <select id="hk-club" value={f.clubId} onChange={(e) => set("clubId", e.target.value)}>
-                    {(isAdmin || !f.clubId) && <option value="">{isAdmin ? "Another organiser (type below)" : "Choose your club"}</option>}
+                  <select id="hk-club" value={f.clubId} onChange={(e) => pickClub(e.target.value)}>
+                    {(isAdmin || !f.clubId) && <option value="">{isAdmin ? OUT_OF_COLLEGE : "Choose your club"}</option>}
                     {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select></div>
-                <div className="field"><label htmlFor="hk-org">Organiser as written {f.clubId ? "(optional)" : ""} <Badge k="organizerName" /></label><input id="hk-org" type="text" value={f.organizerName} maxLength={120} placeholder="e.g. Coding Club, BMSIT&M" onChange={(e) => set("organizerName", e.target.value)} /></div>
+                  </select>
+                  {!f.clubId && isAdmin && <small>For a hackathon at another college (for example CMRIT): type the organiser's name on the right, and pin the venue below.</small>}</div>
+                <div className="field"><label htmlFor="hk-org">{f.clubId ? (isIeee(clubs.find((c) => c.id === f.clubId)?.name) ? "IEEE student branch or organiser" : "Organiser (same as the club)") : "Name of the college or organisation"} <Badge k="organizerName" /></label><input id="hk-org" type="text" value={f.organizerName} maxLength={120} placeholder={!f.clubId ? "e.g. CMR Institute of Technology" : isIeee(clubs.find((c) => c.id === f.clubId)?.name) ? "e.g. IEEE BMSIT Student Branch" : "Filled in from the club"} onChange={(e) => set("organizerName", e.target.value)} /></div>
                 <div className="field"><label htmlFor="hk-theme">Theme <Badge k="theme" /></label><input id="hk-theme" type="text" value={f.theme} maxLength={80} onChange={(e) => set("theme", e.target.value)} /></div>
                 <div className="field"><label htmlFor="hk-mode">Mode <Badge k="mode" /></label>
                   <select id="hk-mode" value={f.mode} onChange={(e) => set("mode", e.target.value)}>{MODES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
