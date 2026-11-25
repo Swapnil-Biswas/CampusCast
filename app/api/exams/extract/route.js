@@ -32,7 +32,7 @@ export async function POST(req) {
   if (!providers.length) {
     await supabase.from("exam_extractions").update({
       status: "failed", finished_at: new Date().toISOString(),
-      error: `AI extraction isn't set up on this server yet (add GEMINI_API_KEY or GROQ_API_KEY).`,
+      error: `AI extraction isn't set up on this server yet (add GEMINI_API_KEY, OPENROUTER_API_KEY or GROQ_API_KEY).`,
       field_meta: { _failure: { code: "not_configured", retryable: true } },
     }).eq("id", extractionId);
     return json({ status: "failed", error: "not_configured" }, 503);
