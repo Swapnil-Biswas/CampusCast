@@ -202,7 +202,7 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Students are notified only when a notice is published.
 
 **Tests**
-- `npm run test:exams`: 147 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
+- `npm run test:exams`: 151 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
 - `supabase/tests/stage6.mjs`: 119 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
 - `supabase/tests/stage7.mjs`: 90 checks of the approver hierarchy, self-approval blocking, notifications to approvers, reminders (windows, duplicates, department and semester matching) and PDF retention.
 

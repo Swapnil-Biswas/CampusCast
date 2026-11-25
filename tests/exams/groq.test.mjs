@@ -162,3 +162,14 @@ test("Groq cannot read a photo: it steps aside without a request, and Gemini rea
   assert.equal(seen, "image/jpeg");
   assert.deepEqual(r.tried, [{ provider: "groq", code: "image_unsupported" }]);
 });
+
+import { extractWithOpenRouter } from "../../lib/exams/openrouter.js";
+
+test("OpenRouter (which shares the text reader) also steps aside for a photo, making no request", async () => {
+  const { calls, fetchImpl } = rec(reply(goodRaw()));
+  await assert.rejects(
+    extractWithOpenRouter({ pdf: pdfBytes(), mime: "image/png", filename: "n.png", departments: DEPTS, apiKey: "k", fetchImpl, sleep: noSleep, readPages }),
+    (e) => e.code === "image_unsupported" && e.retryable === false,
+  );
+  assert.equal(calls.length, 0);
+});
