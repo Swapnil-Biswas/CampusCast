@@ -6,7 +6,6 @@ import { isUuid } from "../../../../lib/hackathons/validate";
 import { fmtDateTime, fmtRange, formatRupees, hackathonPhase, telLink, waLink } from "../../../../lib/hackathons/status";
 import Countdown from "../../../../components/dashboard/Countdown";
 import ScheduleTimeline from "../../../../components/dashboard/ScheduleTimeline";
-import QrCode from "../../../../components/dashboard/QrCode";
 import CopyButton from "../../../../components/dashboard/CopyButton";
 import { InterestButton } from "../../../../components/dashboard/OfficialActions";
 
@@ -40,11 +39,11 @@ export default async function HackathonDetail({ params }) {
   const brochures = docs.filter((d) => d.mime_type === "application/pdf");
   const organizer = h.club?.name || h.organizer_name;
   const prize = formatRupees(h.prize_amount);
-  const qrTarget = h.website_url || h.link;
+  const mainLink = h.website_url || h.link;
   const d = h.details || {};
   const tel = telLink(h.contact_phone), wa = waLink(h.contact_phone, `Hi, I have a question about ${h.title}.`);
   const canRegister = h.link && ["open", "closing"].includes(p.key);
-  const share = [h.title + (h.tagline ? ` - ${h.tagline}` : ""), fmtRange(h.starts_at, h.ends_at), h.location, prize ? `Prize pool ${prize}` : h.prize, qrTarget].filter(Boolean).join("\n");
+  const share = [h.title + (h.tagline ? ` - ${h.tagline}` : ""), fmtRange(h.starts_at, h.ends_at), h.location, prize ? `Prize pool ${prize}` : h.prize, mainLink].filter(Boolean).join("\n");
 
   return (
     <div className="hk-page">
@@ -71,7 +70,7 @@ export default async function HackathonDetail({ params }) {
           <div className="notice-actions">
             <InterestButton id={h.id} on={on} count={interested} hackathon />
             {canRegister && <a className="btn" href={h.link} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Register now</a>}
-            {h.website_url && <a className="btn-s" href={h.website_url} target="_blank" rel="noopener noreferrer"><Globe size={16} /> Official website</a>}
+            {h.website_url && <a className={canRegister ? "btn-s" : "btn"} href={h.website_url} target="_blank" rel="noopener noreferrer"><Globe size={16} /> Open the official website</a>}
           </div>
           <div className="notice-actions">
             {(h.starts_at || h.deadline) && <a className="btn-s" href={`/dashboard/hackathons/${h.id}/ics`}><CalendarPlus size={16} /> Add to calendar</a>}
@@ -141,16 +140,14 @@ export default async function HackathonDetail({ params }) {
           {brochures.map((b) => <p key={b.id}><a className="btn-s" href={`/api/hackathons/file/${b.id}`} target="_blank" rel="noopener noreferrer"><FileText size={14} /> View the brochure</a> <a className="link-btn" href={`/api/hackathons/file/${b.id}?download=1`}>Download</a></p>)}
         </div>
 
-        {qrTarget && (
-          <div className="hk-qrbox">
-            <QrCode value={qrTarget} label={`QR code for ${host(qrTarget)}`} />
-            <b>{h.website_url ? "Scan to open the official website" : "Scan to open the registration page"}</b>
-            <small>{host(qrTarget)}</small>
-            <div className="notice-actions" style={{ justifyContent: "center" }}>
-              <a className="btn-s" href={qrTarget} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> Open the link</a>
-              <CopyButton text={qrTarget} label="Copy link" />
-            </div>
-            {h.website_url && h.link && h.link !== h.website_url && <small>Registration: <a href={h.link} target="_blank" rel="noopener noreferrer">{host(h.link)}</a></small>}
+        {mainLink && (
+          <div className="hk-linkbox">
+            <b>{h.website_url ? "Official website" : "Registration page"}</b>
+            <a className="btn" href={mainLink} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open in a new window</a>
+            <small>{host(mainLink)}</small>
+            <CopyButton text={mainLink} label="Copy link" />
+            {h.website_url && h.link && h.link !== h.website_url && <a className="btn-s" href={h.link} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> Registration page ({host(h.link)})</a>}
+            <small className="hk-ext">Opens the organisers' own site. Come back here for the programme, the countdown and your calendar.</small>
           </div>
         )}
       </section>

@@ -387,9 +387,9 @@
 .hk-tl-chip.next { background: #fdebc3; border: 1px solid #d99a1d; color: #5a3d00; }
 @media (max-width: 560px) { .hk-tl-item { grid-template-columns: 78px minmax(0, 1fr); } .hk-tl-chip { grid-column: 2; justify-self: start; } }
 
-.hk-contact { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 24px; }
+.hk-contact { grid-template-columns: minmax(0, 1fr) minmax(0, 300px); align-items: start; gap: 24px; }
 .hk-who { margin-bottom: 8px; }
-.hk-qrbox { display: grid; gap: 6px; justify-items: center; text-align: center; max-width: 250px; padding: 12px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--soft); }
-.hk-qr { border-radius: 8px; border: 1px solid var(--line); max-width: 100%; height: auto; }
-.hk-qrbox small { opacity: .7; overflow-wrap: anywhere; }
-@media (max-width: 760px) { .hk-contact { grid-template-columns: 1fr; } .hk-qrbox { justify-self: center; } }
+.hk-linkbox { display: grid; gap: 8px; justify-items: start; max-width: 300px; padding: 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--soft); }
+.hk-linkbox small { opacity: .7; overflow-wrap: anywhere; }
+.hk-linkbox .hk-ext { font-size: 12px; }
+@media (max-width: 760px) { .hk-contact { grid-template-columns: 1fr; } .hk-linkbox { justify-self: stretch; max-width: none; } }

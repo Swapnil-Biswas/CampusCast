@@ -44,6 +44,7 @@ export default async function EditHackathon({ params }) {
         clubs={clubs}
         isAdmin={isAdmin}
         reading={latest && { status: latest.status, error: latest.error }}
+        qrLinks={ex?.autofilled ? (ex.qrLinks || []) : []}
       />
     </>
   );

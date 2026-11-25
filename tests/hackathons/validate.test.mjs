@@ -121,7 +121,7 @@ test("before publishing: a name, a date and an organiser are required; the rest 
   const bare = publishIssues({ title: "", club_id: null, schedule: [] });
   assert.equal(bare.blocking.length, 3);
   assert.ok(bare.hints.some((h) => /No contact/.test(h)));
-  assert.ok(bare.hints.some((h) => /no QR code/.test(h)));
+  assert.ok(bare.hints.some((h) => /cannot open the official site/.test(h)));
   assert.ok(bare.hints.some((h) => /No venue/.test(h)));
   assert.equal(publishIssues({ title: "BuildSprint", starts_at: "x", organizer_name: "Placement Cell" }).blocking.length, 0);
 });

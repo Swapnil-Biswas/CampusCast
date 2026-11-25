@@ -221,3 +221,31 @@ test("the fallback chain carries the hackathon task to every provider", async ()
   assert.equal(r.provider, "groq");
   assert.deepEqual(seen, [["gemini", "record_hackathon"], ["groq", "record_hackathon"]]);
 });
+
+import sharp from "sharp";
+import QRCode from "qrcode";
+import { MISSING } from "../exams/fixtures.mjs";
+
+test("a QR code on a poster photo is decoded, so students get a direct link instead of a code to scan", async () => {
+  const qr = await QRCode.toBuffer("https://forms.example.com/buildsprint", { type: "png", margin: 2, width: 240 });
+  const posterBytes = await sharp({ create: { width: 1000, height: 1400, channels: 3, background: "#301a60" } }).composite([{ input: qr, left: 700, top: 1000 }]).jpeg({ quality: 80 }).toBuffer();
+  const { w, supabase } = world({ bytes: posterBytes });
+  const raw = goodRaw({ websiteUrl: MISSING(), registrationUrl: MISSING(), qrCodeLabel: { value: "Scan to register", source: "explicit", confidence: 0.9, pages: [1], evidence: "Scan to register" } });
+  const out = await run(supabase, fetcher(okResponse(raw)).fetchImpl);
+  assert.deepEqual(out, { state: "completed" });
+  assert.equal(w.hackathon.link, "https://forms.example.com/buildsprint");
+  assert.equal(w.hackathon.website_url, undefined);
+  assert.deepEqual(w.hackathon.details.extraction.qrLinks, ["https://forms.example.com/buildsprint"]);
+  assert.ok(w.hackathon.details.extraction.warnings.some((x) => x.code === "qr_link_used"));
+  assert.equal(w.extraction.result.registrationUrl, "https://forms.example.com/buildsprint");
+});
+
+test("a poster photo with no QR code, and a PDF, just carry on without QR links", async () => {
+  const a = world();
+  await run(a.supabase, fetcher(okResponse(goodRaw())).fetchImpl);
+  assert.deepEqual(a.w.hackathon.details.extraction.qrLinks, []);
+  const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+  const b = world({ bytes: pdf });
+  const out = await run(b.supabase, fetcher(okResponse(goodRaw())).fetchImpl);
+  assert.equal(out.state, "completed");
+});

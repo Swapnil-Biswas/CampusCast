@@ -183,3 +183,51 @@ test("a wrong-shaped answer is rejected", () => {
   assert.equal(normalizeHackathon({ hackathon: "x" }, { clubs: CLUBS }).ok, false);
   assert.equal(normalizeHackathon({ notice: {} }, { clubs: CLUBS }).ok, false);
 });
+
+// ---- links read from QR codes on the poster ----
+const noLinks = { websiteUrl: MISSING(), registrationUrl: MISSING() };
+
+test("a QR code captioned 'register' becomes the registration link, flagged for the club admin to confirm", () => {
+  const n = normalizeHackathon(goodRaw({ ...noLinks, qrCodeLabel: F("Scan to register") }), { clubs: CLUBS, now: NOW, qrLinks: ["https://forms.example.com/buildsprint"] });
+  assert.equal(n.result.registrationUrl, "https://forms.example.com/buildsprint");
+  assert.equal(n.result.websiteUrl, null);
+  assert.deepEqual(n.result.qrLinks, ["https://forms.example.com/buildsprint"]);
+  assert.equal(n.fieldMeta.registrationUrl.evidence, "Read from the QR code on the poster");
+  assert.equal(n.fieldMeta.registrationUrl.needsReview, true);
+  assert.ok(n.warnings.some((w) => w.code === "qr_link_used" && /forms\.example\.com/.test(w.message)));
+});
+
+test("a QR code with no caption becomes the website link when there is none", () => {
+  const n = normalizeHackathon(goodRaw(noLinks), { clubs: CLUBS, now: NOW, qrLinks: ["https://buildsprint.example.com/"] });
+  assert.equal(n.result.websiteUrl, "https://buildsprint.example.com/");
+  assert.equal(n.fieldMeta.websiteUrl.needsReview, true);
+});
+
+test("a link the AI already read from the printed text is never replaced by a QR link", () => {
+  const n = normalizeHackathon(goodRaw({ qrCodeLabel: F("Scan to register") }), { clubs: CLUBS, now: NOW, qrLinks: ["https://other.example.com/"] });
+  assert.equal(n.result.websiteUrl, "https://www.buildsprint.example.com/");
+  assert.equal(n.result.registrationUrl, "https://buildsprint.example.com/register");
+  assert.ok(!n.warnings.some((w) => w.code === "qr_link_used"));
+  assert.deepEqual(n.result.qrLinks, ["https://other.example.com/"]);   // still recorded, so the admin can see it
+});
+
+test("a QR link that matches a printed link is not used twice; unsafe or empty QR links are dropped", () => {
+  const same = normalizeHackathon(goodRaw(), { clubs: CLUBS, now: NOW, qrLinks: ["https://buildsprint.example.com/register"] });
+  assert.ok(!same.warnings.some((w) => w.code === "qr_link_used"));
+  const bad = normalizeHackathon(goodRaw(noLinks), { clubs: CLUBS, now: NOW, qrLinks: ["javascript:alert(1)", "", null, "ftp://x.example.com"] });
+  assert.equal(bad.result.websiteUrl, null);
+  assert.equal(bad.result.registrationUrl, null);
+  assert.deepEqual(bad.result.qrLinks, []);
+});
+
+test("two QR codes fill both slots: the captioned one is the registration page, the other is the website", () => {
+  const n = normalizeHackathon(goodRaw({ ...noLinks, qrCodeLabel: F("Scan to register") }), { clubs: CLUBS, now: NOW, qrLinks: ["https://forms.example.com/r", "https://club.example.com/"] });
+  assert.equal(n.result.registrationUrl, "https://forms.example.com/r");
+  assert.equal(n.result.websiteUrl, "https://club.example.com/");
+});
+
+test("with no QR links nothing changes", () => {
+  const n = normalizeHackathon(goodRaw(), { clubs: CLUBS, now: NOW });
+  assert.deepEqual(n.result.qrLinks, []);
+  assert.equal(n.warnings.length, 0);
+});

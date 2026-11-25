@@ -19,7 +19,7 @@ const META = {
 let counter = 0;
 const nid = (p) => `${p}${++counter}`;
 
-export default function HackathonEditor({ h, meta, warnings, autofilled, poster, clubs, isAdmin, reading }) {
+export default function HackathonEditor({ h, meta, warnings, autofilled, poster, clubs, isAdmin, reading, qrLinks = [] }) {
   const router = useRouter();
   const d = h.details || {};
   const top = useRef(null);
@@ -192,13 +192,14 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
 
             <section className="rv-card">
               <h2>Contact and links</h2>
+              {qrLinks.length > 0 && <p className="form-msg" role="status">The poster has a QR code. CampusCast read it, so students can open {qrLinks.length === 1 ? "its link" : "these links"} directly: {qrLinks.map((u, i) => <span key={u}>{i ? ", " : ""}<a href={u} target="_blank" rel="noopener noreferrer">{(() => { try { return new URL(u).host; } catch { return u; } })()}</a></span>)}. Open {qrLinks.length === 1 ? "it" : "them"} to make sure {qrLinks.length === 1 ? "it is" : "they are"} the right page.</p>}
               <div className="rv-two">
                 <div className="field"><label htmlFor="hk-cn">Contact person <Badge k="contactName" /></label><input id="hk-cn" type="text" value={f.contactName} maxLength={80} onChange={(e) => set("contactName", e.target.value)} /></div>
                 <div className="field"><label htmlFor="hk-cp">Contact phone <Badge k="contactPhone" /></label><input id="hk-cp" type="tel" value={f.contactPhone} placeholder="+91 98450 12345" onChange={(e) => set("contactPhone", e.target.value)} /></div>
                 <div className="field"><label htmlFor="hk-ce">Contact email <Badge k="contactEmail" /></label><input id="hk-ce" type="email" value={f.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} /></div>
               </div>
               <div className="rv-two">
-                <div className="field"><label htmlFor="hk-web">Official website <Badge k="websiteUrl" /></label><input id="hk-web" type="text" value={f.websiteUrl} placeholder="https://..." onChange={(e) => set("websiteUrl", e.target.value)} /><small>Students scan a QR code for this link.</small></div>
+                <div className="field"><label htmlFor="hk-web">Official website <Badge k="websiteUrl" /></label><input id="hk-web" type="text" value={f.websiteUrl} placeholder="https://..." onChange={(e) => set("websiteUrl", e.target.value)} /><small>Students open this link from the hackathon page, in a new window. They do not have to scan anything.</small></div>
                 <div className="field"><label htmlFor="hk-link">Registration link <Badge k="link" /></label><input id="hk-link" type="text" value={f.link} placeholder="https://..." onChange={(e) => set("link", e.target.value)} /></div>
               </div>
             </section>

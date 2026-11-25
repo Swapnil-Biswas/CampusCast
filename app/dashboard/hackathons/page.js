@@ -94,6 +94,7 @@ export default async function Hackathons({ searchParams }) {
                   <Link className="btn-s" href={`/dashboard/hackathons/${h.id}`}>Full details</Link>
                   <InterestButton id={h.id} on={mineSet.has(h.id)} count={cnt.get(h.id) || 0} hackathon />
                   {canRegister && <a className="btn-s clay" href={h.link} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Register</a>}
+                  {h.website_url && <a className="btn-s" href={h.website_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Website</a>}
                 </div>
               </div>
             </article>
