@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ExternalLink, LoaderCircle, Plus, Save, Send, Trash2 } from "lucide-react";
 import { saveReview } from "../../app/dashboard/admin/exams/actions";
+import { instructionText } from "../../lib/exams/constants";
 
 const CATEGORIES = [["ia1", "IA 1"], ["ia2", "IA 2"], ["ia3", "IA 3"], ["final", "Final Examination"], ["special", "Special Examination"]];
 const SPECIAL = [["supplementary", "Supplementary"], ["practical", "Practical"], ["laboratory", "Laboratory"], ["revaluation", "Revaluation"], ["other", "Other"]];
@@ -35,7 +36,7 @@ export default function ExamReview({ notice, entries, departments, pdf, extracti
   });
   const [rows, setRows] = useState(() => entries.map(rowFromDb));
   const [dates, setDates] = useState(() => (d.importantDates || []).map((x) => ({ k: `d${++counter}`, label: x.label || "", date: x.date || "", dateText: x.dateText || "", page: x.page ?? null })));
-  const [ins, setIns] = useState(() => Object.fromEntries(GROUPS.map(([g]) => [g, (d.instructions?.[g] || []).join("\n")])));
+  const [ins, setIns] = useState(() => Object.fromEntries(GROUPS.map(([g]) => [g, (d.instructions?.[g] || []).map(instructionText).filter(Boolean).join("\n")])));
   const [touched, setTouched] = useState({});
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(null);

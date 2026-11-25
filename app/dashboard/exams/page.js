@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, Download, ExternalLink, FileText, MapPin, Timer } from "lucide-react";
 import { requireVerified } from "../../../lib/dash/ctx";
+import { instructionText } from "../../../lib/exams/constants";
 import { audienceLabel, fmtDate } from "../../../lib/dash/meta";
 import { TAB_LABELS, TAB_ORDER, countByCategory, dayName, isOver, nextExam, pickTab, rowsForStudent, sortNoticesSoonestFirst, sortRows, timeRange, todayIST } from "../../../lib/exams/student";
 import ExamCountdown from "../../../components/dashboard/ExamCountdown";
@@ -94,7 +95,7 @@ export default async function Exams({ searchParams }) {
             const over = isOver(rows, today);
             const next = nextExam(rows);
             const noticeDocs = (docs || []).filter((d) => d.notice_id === n.id);
-            const groups = GROUPS.map(([g, label]) => [label, n.details?.instructions?.[g] || []]).filter(([, items]) => items.length);
+            const groups = GROUPS.map(([g, label]) => [label, (n.details?.instructions?.[g] || []).map(instructionText).filter(Boolean)]).filter(([, items]) => items.length);
             const dates = n.details?.importantDates || [];
             return (
               <article key={n.id} className={`notice exam-notice${over ? " over" : ""}`} style={{ "--u": "#e8603c" }}>
