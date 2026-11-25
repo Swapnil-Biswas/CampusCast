@@ -35,7 +35,15 @@ function uploadToStorage(file, path, token, onProgress) {
     xhr.setRequestHeader("authorization", `Bearer ${token}`);
     xhr.setRequestHeader("x-upsert", "false");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status}).`)));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      // Say what storage actually objected to (for example a file type the bucket does not allow yet).
+      let why = "";
+      try { why = String(JSON.parse(xhr.responseText)?.message || "").slice(0, 160); } catch { /* not JSON */ }
+      if (/mime|not supported|not allowed/i.test(why)) return reject(new Error("Supabase storage does not accept this file type yet. Run supabase/dashboard-6-exams.sql in the Supabase SQL Editor (it adds photo support), then try again."));
+      if (/exceeded|too large|size/i.test(why)) return reject(new Error("The file is larger than the storage limit."));
+      reject(new Error(`Upload failed (${xhr.status})${why ? `: ${why}` : "."}`));
+    };
     xhr.onerror = () => reject(new Error("The upload was interrupted. Check your connection and try again."));
     const form = new FormData();   // same shape the Supabase client sends
     form.append("cacheControl", "3600");
