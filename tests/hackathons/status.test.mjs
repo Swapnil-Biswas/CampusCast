@@ -131,3 +131,8 @@ test("dates are shown in India time, on one line, whether the event is one day o
   assert.equal(fmtRange("2026-12-12T03:30:00Z", null), "Sat, 12 Dec 2026, 9:00 AM");
   assert.equal(fmtRange(null, null), "");
 });
+
+test("the calendar file puts the venue address in the location", () => {
+  const ics = buildHackathonIcs({ id: "q", title: "Hack", location: "CMR Institute of Technology", venue_address: "AECS Layout, Bengaluru", starts_at: "2026-12-12T09:00:00+05:30", schedule: [] }, { nowMs: 0 });
+  assert.ok(ics.includes(String.raw`LOCATION:CMR Institute of Technology\, AECS Layout\, Bengaluru`));
+});

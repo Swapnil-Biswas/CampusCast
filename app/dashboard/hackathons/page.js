@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarClock, ExternalLink, MapPin, Trophy, Users, Wallet } from "lucide-react";
 import { getPublisher } from "../../../lib/dash/ctx";
 import { fmtRange, formatRupees, hackathonPhase, ms, sortHackathons } from "../../../lib/hackathons/status";
+import { CAMPUS, formatKm } from "../../../lib/hackathons/geo";
 import Countdown from "../../../components/dashboard/Countdown";
 import { InterestButton } from "../../../components/dashboard/OfficialActions";
 
@@ -84,7 +85,7 @@ export default async function Hackathons({ searchParams }) {
 
                 <ul className="hk-facts">
                   {(h.starts_at || h.ends_at) && <li><CalendarClock size={16} /> <span>{fmtRange(h.starts_at, h.ends_at)}</span></li>}
-                  {h.location && <li><MapPin size={16} /> <span>{h.location}</span></li>}
+                  {(h.location || h.venue_address) && <li><MapPin size={16} /> <span>{h.location || h.venue_address}{h.off_campus && <b className="hk-off"> · Outside campus{h.route_km != null ? `, ${formatKm(h.route_km)} from ${CAMPUS.short}` : ""}</b>}</span></li>}
                   <li><Users size={16} /> <span>Teams of {h.team_min === h.team_max ? h.team_max : `${h.team_min} to ${h.team_max}`}</span></li>
                   {h.fee_amount !== null && h.fee_amount !== undefined && <li><Wallet size={16} /> <span>{Number(h.fee_amount) === 0 ? "Free entry" : `Entry ${formatRupees(h.fee_amount)}`}</span></li>}
                   {(prize || h.prize) && <li className="hk-prize"><Trophy size={16} /> <span><b>{prize || h.prize}</b> prize pool</span></li>}

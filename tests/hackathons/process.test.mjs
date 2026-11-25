@@ -249,3 +249,67 @@ test("a poster photo with no QR code, and a PDF, just carry on without QR links"
   const out = await run(b.supabase, fetcher(okResponse(goodRaw())).fetchImpl);
   assert.equal(out.state, "completed");
 });
+
+// ---- outside the campus: finding the venue on the map ----
+import { guessVenuePin } from "../../lib/hackathons/process.js";
+
+const cmritRaw = (over = {}) => goodRaw({ venue: { value: "CMR Institute of Technology", source: "explicit", confidence: 0.95, pages: [1], evidence: "at CMRIT" }, venueAddress: { value: "AECS Layout, Kundalahalli, Bengaluru", source: "explicit", confidence: 0.9, pages: [1], evidence: "" }, offCampus: { value: true, source: "inferred", confidence: 0.8, pages: [1], evidence: "at CMRIT" }, ...over });
+const CMRIT_HIT = { name: "CMR Institute of Technology, AECS Layout", lat: 12.966654, lng: 77.711623, km: 24.2 };
+const ROAD = { km: 36.9, minutes: 42, source: "road" };
+
+test("a hackathon at CMRIT is placed on the map with its road distance from BMSIT", async () => {
+  const { w, supabase } = world();
+  const seen = [];
+  const geo = { search: async (q) => { seen.push(q); return [CMRIT_HIT]; }, route: async () => ROAD, resolve: async () => null };
+  const out = await run(supabase, fetcher(okResponse(cmritRaw())).fetchImpl, { geo });
+  assert.deepEqual(out, { state: "completed" });
+  assert.match(seen[0], /CMR Institute of Technology, AECS Layout, Kundalahalli, Bengaluru/);
+  const h = w.hackathon;
+  assert.deepEqual([h.off_campus, h.venue_lat, h.venue_lng, h.route_km, h.route_minutes, h.route_source], [true, 12.966654, 77.711623, 36.9, 42, "road"]);
+  assert.equal(h.venue_address, "AECS Layout, Kundalahalli, Bengaluru");
+  const warn = h.details.extraction.warnings.find((x) => x.code === "venue_pin_guess");
+  assert.ok(warn && /36\.9|about 36\.9 km/.test(warn.message));
+  assert.equal(w.extraction.field_meta.venuePin.needsReview, true);
+});
+
+test("a venue that cannot be found is flagged, not guessed, and the reading still completes", async () => {
+  const none = world();
+  const out = await run(none.supabase, fetcher(okResponse(cmritRaw())).fetchImpl, { geo: { search: async () => [], route: async () => ROAD, resolve: async () => null } });
+  assert.equal(out.state, "completed");
+  assert.equal(none.w.hackathon.off_campus, true);
+  assert.equal("venue_lat" in none.w.hackathon, false);
+  assert.ok(none.w.hackathon.details.extraction.warnings.some((x) => x.code === "venue_not_found"));
+  const broken = world();
+  const out2 = await run(broken.supabase, fetcher(okResponse(cmritRaw())).fetchImpl, { geo: { search: async () => { throw new Error("service down"); }, route: async () => ROAD, resolve: async () => null } });
+  assert.equal(out2.state, "completed");
+  assert.ok(broken.w.hackathon.details.extraction.warnings.some((x) => x.code === "venue_not_found"));
+});
+
+test("a match far from Bengaluru is a different place with the same name and is ignored", async () => {
+  const far = { name: "CMR Institute, Hyderabad", lat: 17.5, lng: 78.5, km: 500 };
+  const pin = await guessVenuePin({ venue: "CMR Institute of Technology", venueAddress: null, mapUrl: null }, { search: async () => [far, CMRIT_HIT], route: async () => ROAD });
+  assert.deepEqual([pin.lat, pin.lng], [12.966654, 77.711623]);
+  assert.equal(await guessVenuePin({ venue: "CMR Institute", venueAddress: null, mapUrl: null }, { search: async () => [far], route: async () => ROAD }), null);
+});
+
+test("a map link printed on the poster is used before any search", async () => {
+  let searched = false;
+  const pin = await guessVenuePin({ venue: "CMRIT", venueAddress: null, mapUrl: "https://www.google.com/maps/@12.9666,77.7116,17z" }, { search: async () => { searched = true; return []; }, route: async () => ROAD, resolve: async () => ({ lat: 12.9666, lng: 77.7116 }) });
+  assert.deepEqual([pin.lat, pin.lng, searched], [12.9666, 77.7116, false]);
+});
+
+test("with the straight line only, the pin is kept with that source so the page can say so", async () => {
+  const pin = await guessVenuePin({ venue: "CMRIT", venueAddress: null, mapUrl: null }, { search: async () => [CMRIT_HIT], route: async () => ({ km: 24.2, minutes: null, source: "straight" }) });
+  assert.deepEqual([pin.km, pin.minutes, pin.source], [24.2, null, "straight"]);
+});
+
+test("a hackathon on campus never touches the map services", async () => {
+  const { w, supabase } = world();
+  let called = 0;
+  const geo = { search: async () => { called++; return []; }, route: async () => { called++; return ROAD; }, resolve: async () => { called++; return null; } };
+  const out = await run(supabase, fetcher(okResponse(goodRaw())).fetchImpl, { geo });
+  assert.equal(out.state, "completed");
+  assert.equal(called, 0);
+  assert.equal(w.hackathon.off_campus, undefined);
+  assert.equal("venue_lat" in w.hackathon, false);
+});

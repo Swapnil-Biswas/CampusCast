@@ -125,3 +125,31 @@ test("before publishing: a name, a date and an organiser are required; the rest 
   assert.ok(bare.hints.some((h) => /No venue/.test(h)));
   assert.equal(publishIssues({ title: "BuildSprint", starts_at: "x", organizer_name: "Placement Cell" }).blocking.length, 0);
 });
+
+test("a hackathon outside the campus keeps its address and map pin; on campus is the default", () => {
+  const off = run({ offCampus: true, venueAddress: "  3rd Cross, AECS Layout, Bengaluru ", venueLat: "12.9666543", venueLng: 77.7116234 });
+  assert.equal(off.ok, true);
+  assert.deepEqual([off.patch.off_campus, off.patch.venue_address, off.patch.venue_lat, off.patch.venue_lng], [true, "3rd Cross, AECS Layout, Bengaluru", 12.966654, 77.711623]);
+  const on = run({});
+  assert.deepEqual([on.patch.off_campus, on.patch.venue_address, on.patch.venue_lat, on.patch.venue_lng], [false, null, null, null]);
+  assert.equal(run({ offCampus: true }).ok, true, "a pin is advised, not required");
+});
+
+test("a map pin needs both numbers and must be real", () => {
+  assert.equal(run({ venueLat: "12.97" }).ok, false);
+  assert.equal(run({ venueLng: "77.6" }).ok, false);
+  assert.equal(run({ venueLat: "95", venueLng: "77.6" }).ok, false);
+  assert.equal(run({ venueLat: "abc", venueLng: "77.6" }).ok, false);
+  assert.equal(run({ venueLat: "", venueLng: "" }).ok, true);
+});
+
+test("outside the campus without a pin is a hint at publishing, not a block", () => {
+  const noPin = publishIssues({ title: "BuildSprint", starts_at: "x", club_id: "c", location: "CMRIT", off_campus: true, venue_lat: null });
+  assert.equal(noPin.blocking.length, 0);
+  assert.ok(noPin.hints.some((h) => /outside the campus but has no map pin/.test(h)));
+  const withPin = publishIssues({ title: "BuildSprint", starts_at: "x", club_id: "c", location: "CMRIT", off_campus: true, venue_lat: 12.96, venue_lng: 77.7 });
+  assert.ok(!withPin.hints.some((h) => /map pin/.test(h)));
+  const onCampus = publishIssues({ title: "BuildSprint", starts_at: "x", club_id: "c", location: "Hall", off_campus: false });
+  assert.ok(!onCampus.hints.some((h) => /map pin/.test(h)));
+  assert.ok(!publishIssues({ title: "B", starts_at: "x", club_id: "c", venue_address: "Somewhere, Bengaluru" }).hints.some((h) => /No venue/.test(h)), "an address counts as a venue");
+});

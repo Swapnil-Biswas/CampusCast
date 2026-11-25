@@ -17,7 +17,7 @@ export async function GET(req, { params }) {
   const { profile } = await getProfile(supabase, user.id);
   if (profile?.status !== "verified") return deny(403, "Your profile is not verified yet.");
 
-  const { data: h } = await supabase.from("hackathons").select("id, title, status, location, organizer_name, prize, website_url, link, starts_at, ends_at, deadline, schedule, club:clubs(name)").eq("id", id).maybeSingle();
+  const { data: h } = await supabase.from("hackathons").select("id, title, status, location, venue_address, organizer_name, prize, website_url, link, starts_at, ends_at, deadline, schedule, club:clubs(name)").eq("id", id).maybeSingle();
   if (!h || h.status === "draft") return deny(404, "Not found.");
   const ics = buildHackathonIcs({ ...h, organizer: h.club?.name }, { host: new URL(req.url).hostname });
   const name = h.title.replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "hackathon";

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getPublisher } from "../../../../lib/dash/ctx";
 import { postingClubs } from "../../../../lib/hackathons/access";
+import { findVenue, roadRoute } from "../../../../lib/hackathons/geocode";
 import { isUuid, publishIssues, validateHackathon } from "../../../../lib/hackathons/validate";
 import { aiConfig } from "../../../../lib/exams/config";
 import { sniffFile } from "../../../../lib/exams/pdf";
@@ -112,16 +113,41 @@ export async function saveHackathon({ id, data }) {
   if (p.error) return { error: p.error };
   if (!isUuid(id)) return { error: "Invalid request." };
   const { supabase, isAdmin } = p.ctx;
-  const { data: current } = await supabase.from("hackathons").select("id, details").eq("id", id).maybeSingle();
+  const { data: current } = await supabase.from("hackathons").select("id, details, venue_lat, venue_lng, route_km, route_source").eq("id", id).maybeSingle();
   if (!current) return { error: "That hackathon was not found." };
   const v = validateHackathon(data, { clubs: p.clubs, isAdmin });
   if (!v.ok) return { error: v.errors[0], errors: v.errors };
   const details = { ...(current.details || {}), ...v.details };
-  const { data: saved, error } = await supabase.from("hackathons").update({ ...v.patch, details }).eq("id", id).select("id");
+
+  // Outside the campus: measure the road distance from BMSIT, but only when the pin is new or was only a straight line.
+  const patch = { ...v.patch };
+  if (patch.off_campus && patch.venue_lat != null) {
+    const same = current.venue_lat != null && Math.abs(Number(current.venue_lat) - patch.venue_lat) < 1e-6 && Math.abs(Number(current.venue_lng) - patch.venue_lng) < 1e-6
+      && current.route_km != null && current.route_source === "road";
+    if (!same) {
+      const r = await roadRoute({ lat: patch.venue_lat, lng: patch.venue_lng });
+      patch.route_km = r.km; patch.route_minutes = r.minutes; patch.route_source = r.source;
+    }
+  } else {
+    patch.route_km = null; patch.route_minutes = null; patch.route_source = null;
+  }
+  const { data: saved, error } = await supabase.from("hackathons").update({ ...patch, details }).eq("id", id).select("id");
   if (error) return { error: message(error) };
   if (!saved?.length) return { error: "You cannot edit this hackathon." };
   refresh(id);
   return { ok: true };
+}
+
+// The editor's "find on map": a search by venue name or address, or a pasted Google Maps link. Returns places to choose from.
+export async function locateVenue({ query, link }) {
+  const p = await publisher();
+  if (p.error) return { error: p.error };
+  try {
+    const places = await findVenue({ query: typeof query === "string" ? query : "", link: typeof link === "string" ? link : "" });
+    return { places };
+  } catch (e) {
+    return { error: message(e) };
+  }
 }
 
 // Publish, unpublish (back to a draft) or cancel. Publishing needs no approval: the club admin does it directly.

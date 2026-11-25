@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarPlus, ExternalLink, FileText, Globe, Mail, MapPin, M
 import { getPublisher } from "../../../../lib/dash/ctx";
 import { isUuid } from "../../../../lib/hackathons/validate";
 import { fmtDateTime, fmtRange, formatRupees, hackathonPhase, telLink, waLink } from "../../../../lib/hackathons/status";
+import { CAMPUS, directionsUrl, formatKm, osmDirectionsUrl, osmEmbedUrl, placeUrl, routeSummary } from "../../../../lib/hackathons/geo";
 import Countdown from "../../../../components/dashboard/Countdown";
 import ScheduleTimeline from "../../../../components/dashboard/ScheduleTimeline";
 import CopyButton from "../../../../components/dashboard/CopyButton";
@@ -43,6 +44,11 @@ export default async function HackathonDetail({ params }) {
   const d = h.details || {};
   const tel = telLink(h.contact_phone), wa = waLink(h.contact_phone, `Hi, I have a question about ${h.title}.`);
   const canRegister = h.link && ["open", "closing"].includes(p.key);
+  // where it is, and how to get there from BMSIT
+  const pinOk = h.venue_lat != null && h.venue_lng != null;
+  const dest = pinOk ? { lat: Number(h.venue_lat), lng: Number(h.venue_lng) } : { text: [h.location, h.venue_address].filter(Boolean).join(", ") };
+  const route = routeSummary(h);
+  const showWhere = Boolean((h.off_campus || pinOk) && (pinOk || dest.text));
   const share = [h.title + (h.tagline ? ` - ${h.tagline}` : ""), fmtRange(h.starts_at, h.ends_at), h.location, prize ? `Prize pool ${prize}` : h.prize, mainLink].filter(Boolean).join("\n");
 
   return (
@@ -82,13 +88,38 @@ export default async function HackathonDetail({ params }) {
 
       <section className="hk-grid" aria-label="Key details">
         <div className="hk-fact"><span>When</span><b>{fmtRange(h.starts_at, h.ends_at) || "To be announced"}</b></div>
-        <div className="hk-fact"><span>Venue</span><b>{h.location || "To be announced"}</b>{h.map_url && <a href={h.map_url} target="_blank" rel="noopener noreferrer"><MapPin size={14} /> Open the map</a>}</div>
+        <div className="hk-fact"><span>Venue</span><b>{h.location || h.venue_address || "To be announced"}</b>
+          {h.location && h.venue_address && <small>{h.venue_address}</small>}
+          {h.off_campus && <small className="hk-off">Outside the BMSIT campus{route?.km != null ? ` · ${formatKm(route.km)} from ${CAMPUS.short}${route.road ? " by road" : ""}` : ""}</small>}
+          {h.map_url && <a href={h.map_url} target="_blank" rel="noopener noreferrer"><MapPin size={14} /> Open the map</a>}</div>
         <div className={`hk-fact${prize || h.prize ? " big" : ""}`}><span><Trophy size={14} /> Prize pool</span><b>{prize || h.prize || "Not stated"}</b>{prize && h.prize && !h.prize.includes(prize.replace("₹", "")) && <small>{h.prize}</small>}</div>
         <div className="hk-fact"><span><Users size={14} /> Team size</span><b>{h.team_min === h.team_max ? `${h.team_max} member${h.team_max === 1 ? "" : "s"}` : `${h.team_min} to ${h.team_max} members`}</b></div>
         <div className="hk-fact"><span><Wallet size={14} /> Entry fee</span><b>{h.fee_amount == null ? "Not stated" : Number(h.fee_amount) === 0 ? "Free" : formatRupees(h.fee_amount)}</b>{h.fee_note && <small>{h.fee_note}</small>}</div>
         <div className="hk-fact"><span>Registration</span><b>{h.deadline ? `Closes ${fmtDateTime(h.deadline)}` : "See the organisers"}</b>{h.registration_opens_at && <small>Opens {fmtDateTime(h.registration_opens_at)}</small>}</div>
         {h.eligibility && <div className="hk-fact wide"><span>Who can take part</span><b>{h.eligibility}</b></div>}
       </section>
+
+      {showWhere && (
+        <section className="hk-sec hk-where" aria-label="Getting there">
+          <h2>{h.off_campus ? "Getting there" : "Location"} <small>{h.off_campus ? `Outside the ${CAMPUS.short} campus` : `At the ${CAMPUS.short} campus`}</small></h2>
+          <p className="hk-venue"><b>{h.location || "Venue"}</b>{h.venue_address && <span>{h.venue_address}</span>}</p>
+          {route?.text && (
+            <div className="hk-route">
+              <b>{formatKm(route.km)}</b>
+              <span>{route.text}. Traffic in Bengaluru can make it much longer, so leave early.</span>
+            </div>
+          )}
+          {h.off_campus && !route?.text && <p className="inline-msg">The distance has not been measured yet. Open the directions to see it.</p>}
+          <div className="notice-actions">
+            {h.off_campus && <a className="btn" href={directionsUrl({ to: dest })} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Directions from {CAMPUS.short}</a>}
+            {h.off_campus && <a className="btn-s" href={directionsUrl({ to: dest, mode: "transit" })} target="_blank" rel="noopener noreferrer">By bus or metro</a>}
+            <a className="btn-s" href={placeUrl(dest)} target="_blank" rel="noopener noreferrer"><MapPin size={14} /> Open in Google Maps</a>
+            {h.off_campus && pinOk && <a className="btn-s" href={osmDirectionsUrl(CAMPUS, dest)} target="_blank" rel="noopener noreferrer">Route on OpenStreetMap</a>}
+          </div>
+          {pinOk && <iframe className="hk-map" title={`Map of ${h.location || "the venue"}`} src={osmEmbedUrl(dest)} loading="lazy" referrerPolicy="no-referrer" />}
+          <small className="hk-ext">The map and directions open in a new window; come back here for the programme and the countdown. Distances are measured on roads with free map services, without live traffic.</small>
+        </section>
+      )}
 
       {(h.description || (h.tracks || []).length > 0) && (
         <section className="hk-sec">

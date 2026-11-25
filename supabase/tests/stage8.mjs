@@ -75,6 +75,21 @@ await run("Stage 8: hackathons (details, documents, access)", async (t) => {
   await bad("a schedule that is not a list", `schedule = '{"a":1}'`);
   await bad("more than 100 schedule entries", "schedule = (select jsonb_agg(jsonb_build_object('at', now(), 'title', 'x')) from generate_series(1, 101))");
   await bad("more than 20 prizes", "prize_breakdown = (select jsonb_agg(jsonb_build_object('label', 'x')) from generate_series(1, 21))");
+  // ---------- outside the campus: the venue pin and the route ----------
+  const pin = await t.as(clubA, "update public.hackathons set off_campus = true, venue_address = 'EPIP Zone, Whitefield, Bengaluru', venue_lat = 12.966654, venue_lng = 77.711623, route_km = 36.9, route_minutes = 42, route_source = 'road' where id = $1", [h1]);
+  t.check("a club admin can mark a hackathon as outside the campus, with a pin and a measured route", !pin.error, pin.error);
+  const row = (await t.admin("select off_campus, venue_lat, venue_lng, route_km, route_minutes, route_source from public.hackathons where id = $1", [h1])).rows[0];
+  t.check("the pin and route are stored exactly", row.off_campus === true && Number(row.venue_lat) === 12.966654 && Number(row.venue_lng) === 77.711623 && Number(row.route_km) === 36.9 && row.route_minutes === 42 && row.route_source === "road", JSON.stringify(row));
+  await bad("a pin with a latitude but no longitude", "venue_lng = null");
+  await bad("a latitude beyond 90 degrees", "venue_lat = 95");
+  await bad("a longitude beyond 180 degrees", "venue_lng = 181");
+  await bad("a route source that is not road or straight", "route_source = 'teleport'");
+  await bad("a negative distance", "route_km = -3");
+  await bad("a negative travel time", "route_minutes = -1");
+  t.check("a straight-line distance can be stored with no travel time", !(await t.as(clubA, "update public.hackathons set route_km = 24.2, route_minutes = null, route_source = 'straight' where id = $1", [h1])).error);
+  t.check("a hackathon on campus needs no pin, and new ones default to on campus", (await t.admin("insert into public.hackathons (title, theme, mode, deadline) values ('On campus one', 'x', 'offline', now() + interval '2 days') returning off_campus, venue_lat")).rows[0].off_campus === false);
+  t.check("students can read the pin and distance of a published hackathon", await (async () => { await t.as(clubA, "update public.hackathons set status = 'published' where id = $1", [h1]); const r = (await t.as(stu, "select off_campus, venue_lat, route_km from public.hackathons where id = $1", [h1])).rows[0]; return r && r.off_campus === true && Number(r.route_km) === 24.2; })());
+  await t.as(clubA, "update public.hackathons set status = 'draft' where id = $1", [h1]);
   t.check("the schedule is kept in order as written", JSON.stringify((await t.admin("select schedule from public.hackathons where id = $1", [h1])).rows[0].schedule.map((s) => s.title)) === JSON.stringify(["Registration and breakfast", "Opening ceremony"]));
 
   // ---------- publishing needs no approval ----------

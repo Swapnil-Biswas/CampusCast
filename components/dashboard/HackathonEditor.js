@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ExternalLink, LoaderCircle, Megaphone, Plus, Save, Trash2, Undo2, XCircle } from "lucide-react";
 import { removeHackathon, saveHackathon, setHackathonStatus } from "../../app/dashboard/hackathons/manage/actions";
 import { publishIssues, toLocalInput, validateHackathon } from "../../lib/hackathons/validate";
+import HackathonLocationPicker from "./HackathonLocationPicker";
 
 const MODES = [["offline", "On campus / in person"], ["online", "Online"], ["hybrid", "Hybrid"]];
 const STATUS = { draft: ["Draft: only you can see it", "#d9c8a8"], published: ["Published: students can see it", "#7fb48a"], cancelled: ["Cancelled: students see it as cancelled", "#e8603c"] };
@@ -13,7 +14,7 @@ const META = {
   registrationOpensAt: "registrationOpensAt", deadline: "registrationDeadline", startsAt: "startsAt", endsAt: "endsAt", teamMin: "teamMin", teamMax: "teamMax",
   feeAmount: "feeAmount", feeNote: "feeNote", eligibility: "eligibility", tracks: "tracks", prizeAmount: "prizePoolAmount", prize: "prizePoolText",
   contactName: "contactName", contactPhone: "contactPhone", contactEmail: "contactEmail", websiteUrl: "websiteUrl", link: "registrationUrl",
-  perks: "perks", rules: "rules", sponsors: "sponsors",
+  perks: "perks", rules: "rules", sponsors: "sponsors", offCampus: "offCampus", venueAddress: "venueAddress", venueLat: "venuePin", venueLng: "venuePin",
 };
 
 let counter = 0;
@@ -26,6 +27,7 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
   const [f, setF] = useState(() => ({
     title: h.title || "", tagline: h.tagline || "", theme: h.theme || "", mode: h.mode || "offline", description: h.description || "",
     clubId: h.club_id || "", organizerName: h.organizer_name || "", location: h.location || "", mapUrl: h.map_url || "",
+    offCampus: Boolean(h.off_campus), venueAddress: h.venue_address || "", venueLat: h.venue_lat != null ? String(h.venue_lat) : "", venueLng: h.venue_lng != null ? String(h.venue_lng) : "",
     registrationOpensAt: toLocalInput(h.registration_opens_at), deadline: toLocalInput(h.deadline), startsAt: toLocalInput(h.starts_at), endsAt: toLocalInput(h.ends_at),
     teamMin: h.team_min ?? 1, teamMax: h.team_max ?? 4,
     feeFree: h.fee_amount === 0, feeAmount: h.fee_amount > 0 ? String(h.fee_amount) : "", feeNote: h.fee_note || "", eligibility: h.eligibility || "",
@@ -141,6 +143,19 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
                 <div className="field"><label htmlFor="hk-venue">Venue <Badge k="location" /></label><input id="hk-venue" type="text" value={f.location} maxLength={200} placeholder="Hall, block, or the online platform" onChange={(e) => set("location", e.target.value)} /></div>
                 <div className="field"><label htmlFor="hk-map">Map link <Badge k="mapUrl" /></label><input id="hk-map" type="text" value={f.mapUrl} placeholder="https://maps..." onChange={(e) => set("mapUrl", e.target.value)} /></div>
               </div>
+              <label className="chips-line"><input type="checkbox" checked={f.offCampus} onChange={(e) => set("offCampus", e.target.checked)} /> <span>This hackathon is <b>outside BMSIT</b> (at another college or place) <Badge k="offCampus" /></span></label>
+              {f.offCampus && (
+                <>
+                  <div className="field"><label htmlFor="hk-addr">Venue address <Badge k="venueAddress" /></label><input id="hk-addr" type="text" value={f.venueAddress} maxLength={200} placeholder="Street, area, city" onChange={(e) => set("venueAddress", e.target.value)} /></div>
+                  <HackathonLocationPicker
+                    venueName={f.location} venueAddress={f.venueAddress} lat={f.venueLat} lng={f.venueLng}
+                    saved={{ venue_lat: h.venue_lat, venue_lng: h.venue_lng, route_km: h.route_km, route_minutes: h.route_minutes, route_source: h.route_source }}
+                    flagged={flagged("venueLat")}
+                    onPick={(p) => { setF((s) => ({ ...s, venueLat: String(p.lat), venueLng: String(p.lng) })); setTouched((t) => ({ ...t, venueLat: true })); setDirty(true); setMsg(null); }}
+                    onClear={() => { setF((s) => ({ ...s, venueLat: "", venueLng: "" })); setDirty(true); setMsg(null); }}
+                  />
+                </>
+              )}
             </section>
 
             <section className="rv-card">

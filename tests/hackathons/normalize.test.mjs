@@ -231,3 +231,19 @@ test("with no QR links nothing changes", () => {
   assert.deepEqual(n.result.qrLinks, []);
   assert.equal(n.warnings.length, 0);
 });
+
+// ---- venue: outside BMSIT? ----
+test("the AI's 'outside the campus' is kept and flagged for the admin; the address is cleaned", () => {
+  const n = norm(goodRaw({ venue: F("CMR Institute of Technology"), venueAddress: F("  3rd Cross Road, AECS Layout, Bengaluru "), offCampus: F(true) }));
+  assert.equal(n.result.offCampus, true);
+  assert.equal(n.result.venueAddress, "3rd Cross Road, AECS Layout, Bengaluru");
+  assert.equal(n.fieldMeta.offCampus.needsReview, true);
+});
+
+test("a venue that names BMSIT is on campus whatever the AI says; unclear means on campus", () => {
+  assert.equal(norm(goodRaw({ venue: F("Seminar Hall 2, BMSIT&M"), offCampus: F(true) })).result.offCampus, false);
+  assert.equal(norm(goodRaw({ venue: F("Auditorium, BMS Institute of Technology and Management"), offCampus: F(true) })).result.offCampus, false);
+  assert.equal(norm(goodRaw({ venue: F("BMSCE Basavanagudi"), offCampus: F(true) })).result.offCampus, true, "BMS College of Engineering is a different college");
+  assert.equal(norm(goodRaw({ offCampus: MISSING() })).result.offCampus, false);
+  assert.equal(norm(goodRaw({ offCampus: F("yes") })).result.offCampus, false, "only a real true counts");
+});

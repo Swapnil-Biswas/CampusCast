@@ -393,3 +393,24 @@
 .hk-linkbox small { opacity: .7; overflow-wrap: anywhere; }
 .hk-linkbox .hk-ext { font-size: 12px; }
 @media (max-width: 760px) { .hk-contact { grid-template-columns: 1fr; } .hk-linkbox { justify-self: stretch; max-width: none; } }
+
+/* hackathon venue: outside the campus */
+.hk-off { color: #8a2f14; font-weight: 700; }
+.hk-venue { display: grid; gap: 2px; margin: 0; }
+.hk-venue span { opacity: .75; }
+.hk-route { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding: 10px 14px; border-radius: 12px; background: var(--board); color: var(--cream); }
+.hk-route b { font-family: var(--font-d); font-size: 30px; color: var(--mustard); line-height: 1; }
+.hk-route span { font-size: 14px; flex: 1 1 240px; }
+.hk-map { display: block; width: 100%; height: 320px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--soft); }
+.hk-pick { display: grid; gap: 10px; padding: 12px; border: 1.5px dashed var(--line); border-radius: 12px; background: var(--soft); }
+.hk-pin { display: grid; gap: 8px; }
+.hk-pin-head { display: grid; gap: 2px; }
+.hk-pin-head b { display: inline-flex; align-items: center; gap: 6px; }
+.hk-pin .hk-map { height: 240px; }
+.hk-find { display: flex; gap: 8px; flex-wrap: wrap; }
+.hk-find input { flex: 1 1 240px; min-width: 0; }
+.hk-places { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hk-places li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; }
+.hk-places li div { min-width: 0; }
+.hk-places small { display: block; opacity: .7; }
+@media (max-width: 640px) { .hk-map { height: 240px; } .hk-places li { flex-direction: column; align-items: stretch; } }

@@ -27,6 +27,17 @@ alter table public.hackathons add column if not exists contact_email text;
 alter table public.hackathons add column if not exists website_url text;              -- the official site: the QR code points here (else `link`)
 alter table public.hackathons add column if not exists schedule jsonb not null default '[]';        -- [{ at, title, note }] minute by minute
 alter table public.hackathons add column if not exists details jsonb not null default '{}';         -- { perks: [], rules: [], sponsors: [], extraction: {} }
+-- Where it is. `location` (above) is the venue's name. For a hackathon outside BMSIT (another college, a hotel, a hall),
+-- an admin switches off_campus on and pins the venue on the map; students then see the distance from BMSIT, can open the
+-- route in a new window, and see the map on the page. The pin is a latitude / longitude pair; the road distance is measured
+-- when the pin is saved (route_source says whether it is a real road distance or only a straight line).
+alter table public.hackathons add column if not exists off_campus boolean not null default false;
+alter table public.hackathons add column if not exists venue_address text;
+alter table public.hackathons add column if not exists venue_lat numeric(9, 6);
+alter table public.hackathons add column if not exists venue_lng numeric(9, 6);
+alter table public.hackathons add column if not exists route_km numeric(6, 1);
+alter table public.hackathons add column if not exists route_minutes integer;
+alter table public.hackathons add column if not exists route_source text;
 alter table public.hackathons add column if not exists published_at timestamptz;
 alter table public.hackathons add column if not exists updated_at timestamptz not null default now();
 
@@ -48,6 +59,8 @@ begin
     ('hackathons_urls_check', $c$check ((website_url is null or website_url ~* '^https?://') and (map_url is null or map_url ~* '^https?://'))$c$, false),
     ('hackathons_link_check', $c$check (link is null or link ~* '^https?://')$c$, true),
     ('hackathons_contact_check', $c$check ((contact_phone is null or contact_phone ~ '^[0-9+() -]{7,20}$') and (contact_email is null or contact_email ~ '^[^@ ]+@[^@ ]+\.[^@ ]+$'))$c$, false),
+    ('hackathons_geo_check', $c$check ((venue_lat is null) = (venue_lng is null) and (venue_lat is null or (venue_lat between -90 and 90 and venue_lng between -180 and 180)))$c$, false),
+    ('hackathons_route_check', $c$check ((route_source is null or route_source in ('road', 'straight')) and (route_km is null or route_km >= 0) and (route_minutes is null or route_minutes >= 0))$c$, false),
     ('hackathons_lists_check', $c$check (jsonb_typeof(schedule) = 'array' and jsonb_array_length(schedule) <= 100 and jsonb_typeof(prize_breakdown) = 'array' and jsonb_array_length(prize_breakdown) <= 20 and jsonb_typeof(details) = 'object' and cardinality(tracks) <= 20)$c$, false)
   ) as t(name, body, not_valid)
   loop
