@@ -9,6 +9,8 @@ import { aiConfig } from "../../../../lib/exams/config";
 import { sniffFile } from "../../../../lib/exams/pdf";
 import { STALE_PROCESSING_MS } from "../../../../lib/exams/constants";
 import { clean } from "../../../../lib/exams/normalize";
+import { planHackathonApply } from "../../../../lib/hackathons/plan";
+import { applyPatch, describeApplyFailure } from "../../../../lib/hackathons/apply";
 
 const BUCKET = "hackathon-files";
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -93,6 +95,33 @@ export async function retryHackathonExtraction(extractionId) {
     .insert({ document_id: old.document_id, status: "queued", attempt: (old.attempt || 1) + 1, model: aiConfig().model }).select("id").single();
   if (error) return { error: message(error) };
   return { extractionId: next.id };
+}
+
+// Fills the form again from the saved AI reading (it does not call the AI again). It replaces what is in the form, so the
+// editor asks first. Used when the first fill failed (for example a missing database column) or the form was cleared.
+export async function reapplyHackathonReading(hackathonId) {
+  const p = await publisher();
+  if (p.error) return { error: p.error };
+  if (!isUuid(hackathonId)) return { error: "Invalid request." };
+  const { supabase } = p.ctx;
+  const { data: h } = await supabase.from("hackathons").select("id, title, status, club_id, team_min, team_max, starts_at, deadline, details").eq("id", hackathonId).maybeSingle();
+  if (!h) return { error: "That hackathon was not found." };
+  if (h.status !== "draft") return { error: "Only a draft can be filled again." };
+  const { data: docs } = await supabase.from("hackathon_documents").select("id").eq("hackathon_id", hackathonId);
+  const ids = (docs || []).map((d) => d.id);
+  if (!ids.length) return { error: "There is no uploaded poster to read." };
+  const { data: exs } = await supabase.from("hackathon_extractions").select("id, result, field_meta, created_at").in("document_id", ids).eq("status", "completed").order("created_at", { ascending: false }).limit(1);
+  const ex = exs?.[0];
+  if (!ex?.result) return { error: "The poster has not been read successfully yet. Use Try again on the reading first." };
+  const { warnings = [], ...result } = ex.result;
+  const fieldMeta = Object.fromEntries(Object.entries(ex.field_meta || {}).filter(([k]) => !k.startsWith("_")));
+  const clubs = await postingClubs(supabase, p.ctx);
+  const plan = planHackathonApply(h, { result, warnings, fieldMeta }, { extractionId: ex.id, clubs, force: true });
+  const done = await applyPatch(supabase, hackathonId, plan.patch);
+  await supabase.from("hackathon_extractions").update({ field_meta: done.ok ? fieldMeta : { ...fieldMeta, _applyError: describeApplyFailure(done.failed).slice(0, 400), _applyFailed: done.failed.map((f) => f.key) } }).eq("id", ex.id);
+  refresh();
+  if (!done.ok) return { error: describeApplyFailure(done.failed) };
+  return { ok: true, filled: done.saved.length };
 }
 
 // A new, empty draft for someone who has no poster to upload.

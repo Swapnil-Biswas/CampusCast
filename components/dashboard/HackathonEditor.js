@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ExternalLink, LoaderCircle, Megaphone, Plus, Save, Trash2, Undo2, XCircle } from "lucide-react";
-import { removeHackathon, saveHackathon, setHackathonStatus } from "../../app/dashboard/hackathons/manage/actions";
+import { reapplyHackathonReading, removeHackathon, saveHackathon, setHackathonStatus } from "../../app/dashboard/hackathons/manage/actions";
 import { publishIssues, toLocalInput, validateHackathon } from "../../lib/hackathons/validate";
 import HackathonLocationPicker from "./HackathonLocationPicker";
 import { OUT_OF_COLLEGE, isIeee, organiserAfterClubChange } from "../../lib/hackathons/organiser";
@@ -21,7 +21,7 @@ const META = {
 let counter = 0;
 const nid = (p) => `${p}${++counter}`;
 
-export default function HackathonEditor({ h, meta, warnings, autofilled, poster, clubs, isAdmin, reading, qrLinks = [] }) {
+export default function HackathonEditor({ h, meta, warnings, autofilled, poster, clubs, isAdmin, reading, qrLinks = [], applyError = "" }) {
   const router = useRouter();
   const d = h.details || {};
   const top = useRef(null);
@@ -77,6 +77,13 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
     if (saved.error) return finish(saved);
     finish(await setHackathonStatus({ id: h.id, status }), text);
   };
+  const refill = async () => {
+    if ((dirty || autofilled) && !confirm("This replaces what is in the form with what the AI read from the poster. Continue?")) return;
+    setBusy("refill"); setMsg(null);
+    const res = await reapplyHackathonReading(h.id);
+    if (res?.error) { setBusy(null); setMsg({ err: true, text: res.error }); return; }
+    setBusy(null); setDirty(false); setMsg({ text: "The form was filled in from the poster. Please check every value." }); router.refresh();
+  };
   const remove = async () => {
     if (!confirm(`Remove "${h.title}" and its files? This cannot be undone.`)) return;
     setBusy("remove");
@@ -106,7 +113,17 @@ export default function HackathonEditor({ h, meta, warnings, autofilled, poster,
           {warnings?.length > 0 && <ul className="warn">{warnings.map((w, i) => <li key={i}><AlertTriangle size={14} /> {w.message}</li>)}</ul>}
         </div>
       )}
-      {reading?.status === "failed" && <div className="form-msg err">The AI could not read the poster: {reading.error} You can fill the details in by hand below.</div>}
+      {reading?.status === "completed" && h.status === "draft" && (
+        <div className={`form-msg${!autofilled || applyError ? " err" : ""}`}>
+          {applyError
+            ? <>The AI read the poster, but some details could not be saved into this form. {applyError}</>
+            : !autofilled
+              ? <>The AI has read the poster, but the form was not filled in.</>
+              : <>Form looks wrong or empty? You can fill it again from the AI reading.</>}
+          {" "}<button type="button" className="btn small" disabled={dis} onClick={refill}>{busy === "refill" ? "Filling…" : "Fill the form from the AI reading"}</button>
+        </div>
+      )}
+      {reading?.status === "failed" &&<div className="form-msg err">The AI could not read the poster: {reading.error} You can fill the details in by hand below.</div>}
       {reading && ["queued", "processing"].includes(reading.status) && <div className="form-msg">The poster is still being read. Come back in a minute and reload.</div>}
 
       <div className="rv-grid">

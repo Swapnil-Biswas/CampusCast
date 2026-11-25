@@ -36,6 +36,8 @@ export default async function EditHackathon({ params }) {
     <>
       <Link href="/dashboard/hackathons/manage" className="back-link"><ArrowLeft size={16} /> All my hackathons</Link>
       <HackathonEditor
+        key={ex?.appliedAt || "manual"}
+        applyError={latest?.field_meta?._applyError || ""}
         h={h}
         meta={latest?.field_meta || {}}
         warnings={ex?.warnings || []}
