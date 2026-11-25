@@ -6,23 +6,27 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:exams": "node --test \"tests/exams/*.test.mjs\""
+    "test:exams": "node --test \"tests/exams/*.test.mjs\"",
+    "test:hackathons": "node --test \"tests/hackathons/*.test.mjs\""
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.2",
     "gsap": "^3.15.1",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.70.0",
     "next": "^16.4.5",
     "nodemailer": "^10.6.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "sharp": "^0.35.5",
     "three": "^0.187.0",
     "unpdf": "^2.2.2",
     "web-push": "^4.0.0"
   },
   "devDependencies": {
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4"
   }
 }
