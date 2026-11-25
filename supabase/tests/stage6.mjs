@@ -176,7 +176,8 @@ await run("Stage 6: examination management", async (t) => {
   };
   const dc = await doc(adminA);
   t.check("admin can attach the original PDF", !dc.error, dc.error);
-  t.check("only PDFs are accepted", !!(await doc(adminA, { path: `${adminA}/b.pdf`, mime: "image/png" })).error);
+  t.check("only a PDF or a photo (JPEG, PNG, WebP) is accepted", !!(await doc(adminA, { path: `${adminA}/b.pdf`, mime: "application/zip" })).error && !!(await doc(adminA, { path: `${adminA}/c.pdf`, mime: "image/gif" })).error);
+  t.check("a photo of a notice is accepted", !(await doc(adminA, { path: `${adminA}/d.jpg`, mime: "image/jpeg", sha: SHA("d") })).error);
   t.check("files over 20 MB are refused", !!(await doc(adminA, { path: `${adminA}/c.pdf`, size: 25 * 1024 * 1024 })).error);
   t.check("the file fingerprint must be a sha-256", !!(await doc(adminA, { path: `${adminA}/d.pdf`, sha: "nothex" })).error);
   t.check("another department's admin cannot attach to it", !!(await doc(adminC, { path: `${adminC}/e.pdf`, sha: SHA("c") })).error);
@@ -196,7 +197,7 @@ await run("Stage 6: examination management", async (t) => {
 
   // ---------- storage ----------
   const bucket = (await t.admin("select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'exam-pdfs'")).rows[0];
-  t.check("the PDF bucket is private, 20 MB, PDF only", bucket && bucket.public === false && Number(bucket.file_size_limit) === 20971520 && bucket.allowed_mime_types.join() === "application/pdf", JSON.stringify(bucket));
+  t.check("the bucket is private, 20 MB, PDF and photos only", bucket && bucket.public === false && Number(bucket.file_size_limit) === 20971520 && bucket.allowed_mime_types.join() === "application/pdf,image/jpeg,image/png,image/webp", JSON.stringify(bucket));
   const put = (u, name) => t.as(u, "insert into storage.objects (bucket_id, name, owner) values ('exam-pdfs', $1, $2) returning id", [name, u]);
   t.check("admin can upload into their own folder", !(await put(adminA, `${adminA}/a1.pdf`)).error);
   t.check("admin cannot upload into someone else's folder", !!(await put(adminA, `${adminC}/x.pdf`)).error);
@@ -212,7 +213,7 @@ await run("Stage 6: examination management", async (t) => {
   t.check("matching student can read the original PDF once published", await readable(stuA2, `${adminA}/a1.pdf`));
   t.check("student of another semester cannot", !(await readable(stuA4, `${adminA}/a1.pdf`)));
   t.check("student of another department cannot", !(await readable(stuC2, `${adminA}/a1.pdf`)));
-  t.check("matching student sees the document row", (await t.as(stuA2, "select 1 from public.exam_documents where notice_id = $1", [n2])).rows.length === 1);
+  t.check("matching student sees the document rows (the PDF and the photo)", (await t.as(stuA2, "select 1 from public.exam_documents where notice_id = $1", [n2])).rows.length === 2);
   t.check("students still never see extraction data", (await t.as(stuA2, "select 1 from public.exam_extractions")).rows.length === 0);
   t.check("uploader cannot delete a published notice's PDF", (await t.as(adminA, "delete from storage.objects where bucket_id = 'exam-pdfs' and name = $1", [`${adminA}/a1.pdf`])).rowCount === 0);
 

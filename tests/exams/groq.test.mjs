@@ -147,3 +147,18 @@ test("text is really read from a PDF's text layer, and a PDF with no text gives 
   assert.equal(pages.length, 1);
   assert.match(pages[0], /Time Table for CIE 2 Examinations/);
 });
+
+test("Groq cannot read a photo: it steps aside without a request, and Gemini reads it instead", async () => {
+  const { calls, fetchImpl } = rec(reply(goodRaw()));
+  await assert.rejects(call(fetchImpl, { mime: "image/jpeg" }), (e) => e.code === "image_unsupported" && e.retryable === false);
+  assert.equal(calls.length, 0);
+  let seen;
+  const r = await extractWithFallback({
+    ...base, mime: "image/jpeg",
+    providers: [{ provider: "groq", apiKey: "b" }, { provider: "gemini", apiKey: "a" }],
+    extractors: { groq: fail("image_unsupported", false), gemini: async (a) => { seen = a.mime; return { input: {}, model: "g" }; } },
+  });
+  assert.equal(r.provider, "gemini");
+  assert.equal(seen, "image/jpeg");
+  assert.deepEqual(r.tried, [{ provider: "groq", code: "image_unsupported" }]);
+});
