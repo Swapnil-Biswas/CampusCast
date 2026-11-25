@@ -38,6 +38,12 @@ await run("Stage 7: approvers (HOD / cluster head), reminders, PDF retention", a
   const aud = (await t.admin("select count(*)::int n from public.audit_log where action = 'exam.approver_depts'")).rows[0].n;
   t.check("assigning approvers is written to the audit log", aud >= 4, String(aud));
 
+  // ---------- signed-out visitors ----------
+  for (const fn of ["exam_semester(uuid)", "exam_audience_match(text[], smallint[], uuid)", "exam_pdf_expired(uuid, integer)", "exam_expired_pdfs(integer)", "exam_mark_pdfs_deleted(uuid[], integer)"]) {
+    const r = (await t.admin("select has_function_privilege('anon', $1, 'execute') a, has_function_privilege('authenticated', $1, 'execute') u", ["public." + fn])).rows[0];
+    t.check(`signed-out visitors cannot call ${fn}, signed-in users can`, !r.a && r.u);
+  }
+
   // ---------- helpers ----------
   const mk = async (over = {}) => {
     const v = { depts: [AIML], sems: [2], status: "draft", by: upl, title: "IA 2 timetable", cat: "ia2", ...over };

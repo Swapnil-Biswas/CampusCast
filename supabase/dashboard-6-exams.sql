@@ -103,6 +103,7 @@ begin
   sem := case when (m >= 8 or m = 1) then 2 * study - 1 else 2 * study end;
   return least(8, sem)::smallint;
 end $$;
+revoke execute on function public.exam_semester(uuid) from public, anon;
 grant execute on function public.exam_semester(uuid) to authenticated;
 
 -- May the signed-in user create and edit notices for exactly these departments?
@@ -152,6 +153,7 @@ returns boolean language sql stable security definer set search_path = public as
       and (p_sems is null or public.exam_semester(p_uid) = any (p_sems))
   )
 $$;
+revoke execute on function public.exam_audience_match(text[], smallint[], uuid) from public, anon;
 grant execute on function public.exam_audience_match(text[], smallint[], uuid) to authenticated;
 
 -- Super admin chooses which departments an admin manages.

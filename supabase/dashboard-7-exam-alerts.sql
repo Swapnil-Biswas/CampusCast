@@ -92,8 +92,10 @@ language sql stable security definer set search_path = public as $$
       end
   )
 $$;
+revoke execute on function public.exam_pdf_expired(uuid, integer) from public, anon;
 grant execute on function public.exam_pdf_expired(uuid, integer) to authenticated;
 
+-- No signed-in user means the database console below; signed-out visitors are blocked by the revokes.
 -- The files that can be removed now. A signed-in admin gets only those for departments they approve for.
 create or replace function public.exam_expired_pdfs(p_days integer default 20)
 returns table (document_id uuid, notice_id uuid, storage_path text)
@@ -104,6 +106,7 @@ language sql stable security definer set search_path = public as $$
     and (auth.uid() is null or public.can_approve_exam_depts(n.audience_depts))
   limit 200
 $$;
+revoke execute on function public.exam_expired_pdfs(integer) from public, anon;
 grant execute on function public.exam_expired_pdfs(integer) to authenticated;
 
 -- Called after the files were removed from storage.
@@ -120,6 +123,7 @@ begin
   if n > 0 then perform public.log_audit('exam.pdf_removed', 'exam_document', array_to_string(p_ids, ','), jsonb_build_object('count', n)); end if;
   return n;
 end $$;
+revoke execute on function public.exam_mark_pdfs_deleted(uuid[], integer) from public, anon;
 grant execute on function public.exam_mark_pdfs_deleted(uuid[], integer) to authenticated;
 
 -- Approvers may delete the stored file of an expired notice for their departments (super admins already can).
