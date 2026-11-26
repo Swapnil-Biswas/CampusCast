@@ -240,3 +240,19 @@ Connect has two halves. **Teammates** is the original board for finding people f
 **Tests:** `npm run test:connect` (link and profile validation) and `node supabase/tests/stage9.mjs` (81 database checks: opt-in, blocks, no leaked email or USN, who may set faculty, link and size constraints, search and filters). `node supabase/tests/runtest.mjs supabase/tests/stage9.mjs` runs the same checks on an in-memory Postgres (PGlite, `npm install` first) with no database password.
 
 **Known limits:** no profile photo (an initials avatar is shown), no in-app messaging, and a faculty member who is not yet ID-verified cannot appear because only verified accounts are listed.
+
+### Filling a profile automatically
+
+On **My profile**, a person can give a **resume** (PDF or photo, up to 8 MB), their **LinkedIn "Save to PDF" file** or pasted profile text, and their **GitHub username**. The AI (the same providers and fallback as the exam notices) drafts the form; the person checks it and presses **Confirm and save**.
+
+- **LinkedIn is never scraped.** Its pages need a login and its terms forbid it, so CampusCast only reads what the person exports or pastes. The LinkedIn address stays a link.
+- **GitHub** is read through the official public API with no token (name, bio, website, own repositories and their languages; never the email). Without a token GitHub allows 60 requests an hour per server; a clear message says when to retry.
+- **Nothing is saved or shown by a reading.** It fills only empty fields, marked **Check**. A field the person already wrote is left alone and gets a suggestion (add the new items, replace, or keep). Visibility is never changed.
+- **Not invented:** the AI is told to record only what is written. When every source was text, a research paper whose title is not in the documents is dropped, as is a venue or link that cannot be found. A photo or scanned file cannot be checked this way, and the page says to compare it.
+- **Private details** (phone, email, address, date of birth, USN and similar) are removed from text before it is sent to the AI and again from the AI's answer. A photo or scan goes to the AI as it is; only the answer can be cleaned. Detection is pattern-based, so the person should still read what was filled in. The AI service receives the document, and free services may keep what they receive; the page says so.
+- **Files** are in the private `profile-files` bucket, visible only to their owner (not to admins), with **Remove** and **Delete my files and reading** buttons. Deleting an account does not delete storage files by itself.
+- At most **8 readings an hour** per person. "Fill again from the last reading" does not call the AI.
+
+**Setup:** run `supabase/dashboard-10-connect-autofill.sql` in the Supabase SQL Editor after dashboard-9, and set `GEMINI_API_KEY` (needed for photos and scans) or another AI key.
+
+**Tests:** `npm run test:connect` and `node supabase/tests/stage10.mjs` (or `node supabase/tests/runtest.mjs supabase/tests/stage10.mjs dashboard-10-connect-autofill.sql`).

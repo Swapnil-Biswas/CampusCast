@@ -1,10 +1,12 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { EyeOff } from "lucide-react";
 import { hideConnectProfile, saveConnectProfile } from "../../app/dashboard/connect/people-actions";
 import { formatLines } from "../../lib/connect/profile";
+import { applyDraft, isList, mergeList } from "../../lib/connect/draft";
+import ProfileAutofill from "./ProfileAutofill";
 import { useAct } from "./Common";
 
 const ITEMS = [
@@ -26,6 +28,8 @@ function Nav() {
 }
 export const ConnectNav = () => <Suspense fallback={null}><Nav /></Suspense>;
 
+const without = (o, k) => { if (!(k in o)) return o; const n = { ...o }; delete n[k]; return n; };
+
 // The visibility switch on the profile page: hide at once.
 export function HideNow() {
   const { msg, pending, act } = useAct();
@@ -33,7 +37,7 @@ export function HideNow() {
 }
 
 // Editor. `p` is the saved row (or {}), `faculty` decides which sections show. Nothing is prefilled with invented content.
-export function ConnectProfileForm({ p, faculty }) {
+export function ConnectProfileForm({ p, faculty, autofill }) {
   const { msg, setMsg, pending, act } = useAct();
   const [saved, setSaved] = useState(null);
   const [v, setV] = useState({
@@ -44,17 +48,45 @@ export function ConnectProfileForm({ p, faculty }) {
     work: formatLines(p.work, "Work"), career: p.career || "", openTo: p.open_to || "",
     linkedin: p.linkedin_url || "", github: p.github_url || "", website: p.website_url || "",
   });
-  const set = (k, x) => { setV((o) => ({ ...o, [k]: x })); setMsg(""); setSaved(null); };
+  const set = (k, x) => { setV((o) => ({ ...o, [k]: x })); setMsg(""); setSaved(null); setFilled((o) => without(o, k)); };
+
+  // Automatic filling: empty fields are filled and marked "Check"; fields with your own words only get a suggestion.
+  const [filled, setFilled] = useState({});
+  const [suggested, setSuggested] = useState({});
+  const latest = useRef(v);
+  latest.current = v;
+  const onDraft = (draft) => {
+    const r = applyDraft(latest.current, draft);
+    latest.current = r.values;
+    setV(r.values); setFilled((o) => ({ ...o, ...r.filled })); setSuggested(r.suggestions); setMsg(""); setSaved(null);
+    return { filled: Object.keys(r.filled), suggested: Object.keys(r.suggestions) };
+  };
+  const take = (k, value, flag) => { setV((o) => ({ ...o, [k]: value })); setFilled((o) => ({ ...o, [k]: flag })); setSuggested((o) => without(o, k)); setSaved(null); };
+  const badge = (k) => filled[k] && <span className="check-badge">{filled[k] === "read" ? "Check · from your documents" : "Check · worked out by AI"}</span>;
+  const suggestion = (k) => suggested[k] && (
+    <div className="suggestion">
+      <b>Suggestion from your documents:</b>
+      <p>{suggested[k].value}</p>
+      <div className="notice-actions">
+        {isList(k) && <button type="button" className="btn-s" onClick={() => take(k, mergeList(k, v[k], suggested[k].value), suggested[k].flag)}>Add the new ones</button>}
+        <button type="button" className="btn-s" onClick={() => take(k, suggested[k].value, suggested[k].flag)}>Replace mine</button>
+        <button type="button" className="btn-s ghost" onClick={() => setSuggested((o) => without(o, k))}>Keep mine</button>
+      </div>
+    </div>
+  );
   const text = (k, label, props = {}, hint) => (
-    <div className="field"><label htmlFor={`cp-${k}`}>{label}{hint && <> <small>{hint}</small></>}</label>
-      <input id={`cp-${k}`} type="text" value={v[k]} onChange={(e) => set(k, e.target.value)} {...props} /></div>
+    <div className="field"><label htmlFor={`cp-${k}`}>{label}{hint && <> <small>{hint}</small></>} {badge(k)}</label>
+      <input id={`cp-${k}`} type="text" value={v[k]} onChange={(e) => set(k, e.target.value)} {...props} />{suggestion(k)}</div>
   );
   const area = (k, label, props = {}, hint) => (
-    <div className="field"><label htmlFor={`cp-${k}`}>{label}{hint && <> <small>{hint}</small></>}</label>
-      <textarea id={`cp-${k}`} value={v[k]} onChange={(e) => set(k, e.target.value)} style={{ minHeight: 84 }} {...props} /></div>
+    <div className="field"><label htmlFor={`cp-${k}`}>{label}{hint && <> <small>{hint}</small></>} {badge(k)}</label>
+      <textarea id={`cp-${k}`} value={v[k]} onChange={(e) => set(k, e.target.value)} style={{ minHeight: 84 }} {...props} />{suggestion(k)}</div>
   );
+  const toCheck = Object.keys(filled).length;
   return (
-    <form className="form connect-form" onSubmit={(e) => { e.preventDefault(); act(() => saveConnectProfile(v), (r) => setSaved(r.visible ? "visible" : "hidden")); }}>
+    <>
+    {autofill && <ProfileAutofill {...autofill} defaultGithub={v.github} onDraft={onDraft} />}
+    <form className="form connect-form" onSubmit={(e) => { e.preventDefault(); act(() => saveConnectProfile(v), (r) => { setSaved(r.visible ? "visible" : "hidden"); setFilled({}); setSuggested({}); }); }}>
       <fieldset className="acc-group">
         <legend>Who can see this</legend>
         <label className="check"><input type="checkbox" checked={v.visible} onChange={(e) => set("visible", e.target.checked)} /> Show my profile to other signed-in BMSIT students and staff</label>
@@ -91,7 +123,8 @@ export function ConnectProfileForm({ p, faculty }) {
 
       {msg && <p className="form-msg err" role="alert" style={{ whiteSpace: "pre-line" }}>{msg}</p>}
       {saved && !msg && <p className="form-msg ok" role="status">{saved === "visible" ? "Saved. Your profile is visible to other BMSIT users." : "Saved. Your profile is hidden: nobody else can see it."}</p>}
-      <div className="notice-actions"><button className="btn" disabled={pending}>Save profile</button></div>
+      <div className="notice-actions"><button className="btn" disabled={pending}>{toCheck ? "Confirm and save" : "Save profile"}</button>{toCheck > 0 && <span className="audience">{toCheck} filled field{toCheck > 1 ? "s" : ""} to check</span>}</div>
     </form>
+    </>
   );
 }

@@ -53,7 +53,7 @@ for (const f of files) {
   try { await db.exec(fs.readFileSync(p, "utf8")); }
   catch (e) { console.error(`Could not apply ${f}: ${e.message}`); process.exit(1); }
 }
-await db.exec("grant all on all tables in schema public to authenticated; grant all on all sequences in schema public to authenticated;");
+await db.exec("grant all on all tables in schema public to authenticated; grant all on all sequences in schema public to authenticated; grant select, insert, update, delete on storage.objects to authenticated; grant select on storage.buckets to authenticated;");
 
 // ---- hand the harness a pg-style client ----
 globalThis.__campusTestClient = async () => ({
