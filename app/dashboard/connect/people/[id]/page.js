@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, Globe, Pencil } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
 import { requireVerified } from "../../../../../lib/dash/ctx";
 import { shortBranch } from "../../../../../lib/dash/meta";
-import { initials } from "../../../../../lib/connect/profile";
+import { MAX, initials } from "../../../../../lib/connect/profile";
 import { safeHref, safeLinkedIn } from "../../../../../lib/connect/links";
 import { isUuid } from "../../../../../lib/connect/ids";
 import { ReportBlock } from "../../../../../components/dashboard/Common";
@@ -15,12 +15,12 @@ const Section = ({ title, children }) => <section className="person-section"><h2
 const Tags = ({ list, type }) => <div className="checks">{list.map((s) => <Link key={s} className="chip" href={`/dashboard/connect/people?type=${type}&skill=${encodeURIComponent(s)}`}>{s}</Link>)}</div>;
 const Item = ({ x, venue }) => {
   const href = safeHref(x.url);
+  const sub = venue ? x.venue : x.detail;
   return (
     <li>
-      <b>{x.title}</b>{x.year ? <small> · {x.year}</small> : null}
-      {venue && x.venue ? <div className="audience">{x.venue}</div> : null}
-      {x.detail ? <div className="audience">{x.detail}</div> : null}
-      {href && <a className="link-btn" href={href} target="_blank" rel="noopener noreferrer nofollow"><ExternalLink size={13} /> Open link</a>}
+      {href ? <a href={href} target="_blank" rel="noopener noreferrer nofollow"><b>{x.title}</b> <ExternalLink size={13} aria-label="opens in a new tab" /></a> : <b>{x.title}</b>}
+      {x.year ? <small> · {x.year}</small> : null}
+      {sub ? <div className="audience">{sub}</div> : null}
     </li>
   );
 };
@@ -37,10 +37,13 @@ export default async function Person({ params }) {
   if (!p) notFound();      // missing, hidden, blocked and not-allowed all look the same, so nothing leaks
 
   const faculty = p.person_type === "faculty";
-  const li = safeLinkedIn(p.linkedin_url), gh = safeHref(p.github_url), web = safeHref(p.website_url);
+  const li = safeLinkedIn(p.linkedin_url), gh = safeHref(p.github_url);
   const first = (p.full_name || "this person").split(" ")[0];
-  const has = (a) => Array.isArray(a) && a.length > 0;
-  const nothing = !p.headline && !p.about && !has(p.skills) && !has(p.interests) && !p.goals && !has(p.achievements) && !has(p.research_areas) && !has(p.publications) && !has(p.work) && !p.career;
+  // Only the essentials, and only a few of each, even if an older row holds more.
+  const top = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
+  const skills = top(p.skills, MAX.skills), interests = top(p.interests, MAX.interests), achievements = top(p.achievements, MAX.achievements);
+  const areas = top(p.research_areas, MAX.areas), papers = top(p.publications, MAX.publications);
+  const nothing = !p.headline && (faculty ? !areas.length && !papers.length && !p.career : !skills.length && !interests.length && !p.goals && !achievements.length);
 
   return (
     <>
@@ -67,28 +70,22 @@ export default async function Person({ params }) {
         {li ? <a className="btn-s clay" href={li} target="_blank" rel="noopener noreferrer nofollow">{p.is_me ? "My LinkedIn" : `Message ${first} on LinkedIn`}</a>
           : <span className="audience">{p.is_me ? "You have not added a LinkedIn link." : `${first} has not added a LinkedIn link.`}</span>}
         {gh && <a className="btn-s" href={gh} target="_blank" rel="noopener noreferrer nofollow">GitHub</a>}
-        {web && <a className="btn-s" href={web} target="_blank" rel="noopener noreferrer nofollow"><Globe size={15} /> Website</a>}
         {p.email && <a className="btn-s" href={`mailto:${p.email}`}>{p.email}</a>}
         {!p.is_me && <ReportBlock kind="user" refId={p.id} ownerId={p.id} />}
       </div>
       {li && !p.is_me && <p className="audience">CampusCast has no chat. Connect with {first} on LinkedIn to take the conversation further. The link opens in a new tab.</p>}
 
-      {nothing && <div className="empty"><h2>{p.is_me ? "Your profile is empty" : `${first} has not added anything yet`}</h2><p>{p.is_me ? "Add your skills, goals and achievements in the editor." : "Check back later."}</p></div>}
+      {nothing && <div className="empty"><h2>{p.is_me ? "Your profile is empty" : `${first} has not added anything yet`}</h2><p>{p.is_me ? "Add the essentials in the editor, or fill it from your resume." : "Check back later."}</p></div>}
 
-      {p.about && <Section title="About"><p style={{ whiteSpace: "pre-wrap" }}>{p.about}</p></Section>}
       {faculty ? (<>
-        {has(p.research_areas) && <Section title="Research areas"><Tags list={p.research_areas} type="faculty" /></Section>}
-        {has(p.publications) && <Section title="Research papers"><ul className="person-list">{p.publications.map((x, i) => <Item key={i} x={x} venue />)}</ul></Section>}
-        {has(p.work) && <Section title="Related work"><ul className="person-list">{p.work.map((x, i) => <Item key={i} x={x} />)}</ul></Section>}
-        {p.career && <Section title="Career path"><p style={{ whiteSpace: "pre-wrap" }}>{p.career}</p></Section>}
-        {p.open_to && <Section title="Open to"><p style={{ whiteSpace: "pre-wrap" }}>{p.open_to}</p></Section>}
-        {has(p.skills) && <Section title="Skills"><Tags list={p.skills} type="faculty" /></Section>}
-        {has(p.interests) && <Section title="Interests"><Tags list={p.interests} type="faculty" /></Section>}
+        {areas.length > 0 && <Section title="Research areas"><Tags list={areas} type="faculty" /></Section>}
+        {papers.length > 0 && <Section title="Main papers"><ul className="person-list">{papers.map((x, i) => <Item key={i} x={x} venue />)}</ul></Section>}
+        {p.career && <Section title="Where the work is heading"><p>{p.career}</p></Section>}
       </>) : (<>
-        {has(p.skills) && <Section title="Skills"><Tags list={p.skills} type="student" /></Section>}
-        {has(p.interests) && <Section title="Interests"><Tags list={p.interests} type="student" /></Section>}
-        {p.goals && <Section title="Goals"><p style={{ whiteSpace: "pre-wrap" }}>{p.goals}</p></Section>}
-        {has(p.achievements) && <Section title="Achievements"><ul className="person-list">{p.achievements.map((x, i) => <Item key={i} x={x} />)}</ul></Section>}
+        {skills.length > 0 && <Section title="Top skills"><Tags list={skills} type="student" /></Section>}
+        {achievements.length > 0 && <Section title="Key achievements"><ul className="person-list">{achievements.map((x, i) => <Item key={i} x={x} />)}</ul></Section>}
+        {interests.length > 0 && <Section title="Interests"><Tags list={interests} type="student" /></Section>}
+        {p.goals && <Section title="Goal"><p>{p.goals}</p></Section>}
       </>)}
     </>
   );

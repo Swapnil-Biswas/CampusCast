@@ -64,7 +64,7 @@ export default async function People({ searchParams }) {
                   </span>
                 </Link>
                 {r.headline && <p className="person-headline">{r.headline}</p>}
-                {tags.length > 0 && <div className="checks">{tags.slice(0, 6).map((s) => <Link key={s} className="chip" href={qs({ skill: s, page: 1 })}>{s}</Link>)}</div>}
+                {tags.length > 0 && <div className="checks">{tags.slice(0, 5).map((s) => <Link key={s} className="chip" href={qs({ skill: s, page: 1 })}>{s}</Link>)}</div>}
                 <div className="notice-actions">
                   <Link className="btn-s" href={`/dashboard/connect/people/${r.id}`}>View profile</Link>
                   {li && <a className="btn-s" href={li} target="_blank" rel="noopener noreferrer nofollow">LinkedIn</a>}

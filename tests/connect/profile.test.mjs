@@ -27,36 +27,45 @@ test("opt-in flags are only true when explicitly on", () => {
   assert.equal(normalizeProfile({}).row.show_email, false);
 });
 
-test("a faculty profile keeps research, papers, work and career", () => {
+test("a faculty profile keeps the faculty essentials only", () => {
   const r = normalizeProfile({
-    designation: "Associate Professor", researchAreas: "Machine Learning, NLP", career: "Moving into applied AI.",
+    designation: "Associate Professor", researchAreas: "Machine Learning, NLP", career: "Moving into applied AI.", skills: "python", goals: "x",
     publications: [{ title: "A paper", venue: "IEEE Access", year: "2023", url: "https://doi.org/10.1109/x.1" }, { title: "", venue: "", year: "", url: "" }],
-    work: [{ title: "Funded project", detail: "DST grant", url: "https://example.org/p" }],
   }, { faculty: true });
   assert.equal(r.ok, true);
   assert.deepEqual(r.row.research_areas, ["machine learning", "nlp"]);
   assert.deepEqual(r.row.publications, [{ title: "A paper", venue: "IEEE Access", year: 2023, url: "https://doi.org/10.1109/x.1" }]);   // empty row skipped
-  assert.equal(r.row.work[0].url, "https://example.org/p");
+  assert.equal(r.row.career, "Moving into applied AI.");
+  assert.deepEqual(r.row.skills, []);
+  assert.equal(r.row.goals, null);
+});
+
+test("anything that is not essential is not kept, even if sent", () => {
+  for (const faculty of [false, true]) {
+    const { row } = normalizeProfile({ about: "long story", website: "https://example.org", openTo: "x", work: [{ title: "w" }] }, { faculty });
+    assert.deepEqual([row.about, row.website_url, row.open_to, row.work], [null, null, null, []]);
+  }
 });
 
 test("bad input is refused with a message, not silently dropped", () => {
-  const r = normalizeProfile({ linkedin: "https://evil.example/in/x", github: "http://github.com/a", website: "javascript:alert(1)", about: "x".repeat(1300), achievements: [{ title: "Won", year: "soon" }, { detail: "no title" }] });
+  const r = normalizeProfile({ linkedin: "https://evil.example/in/x", github: "http://github.com/a", goals: "x".repeat(300), achievements: [{ title: "Won", year: "soon" }, { detail: "no title" }] });
   assert.equal(r.ok, false);
-  assert.equal(r.errors.length, 6, r.errors.join(" | "));
-  assert.ok(r.errors.some((e) => /LinkedIn/.test(e)));
-  assert.ok(r.errors.some((e) => /GitHub/.test(e)));
-  assert.ok(r.errors.some((e) => /About is too long/.test(e)));
-  assert.ok(r.errors.some((e) => /year/.test(e)));
-  assert.ok(r.errors.some((e) => /title/.test(e)));
+  assert.equal(r.errors.length, 5, r.errors.join(" | "));
+  for (const re of [/LinkedIn/, /GitHub/, /goal is too long/, /year/, /title/]) assert.ok(r.errors.some((e) => re.test(e)), String(re));
   const p = normalizeProfile({ publications: [{ title: "T", url: "http://insecure.example/p" }] }, { faculty: true });
   assert.equal(p.ok, false);
   assert.match(p.errors[0], /Paper 1/);
 });
 
-test("too many items are refused", () => {
-  const r = normalizeProfile({ skills: Array.from({ length: 25 }, (_, i) => `s${i}`).join(",") });
-  assert.equal(r.ok, false);
-  assert.match(r.errors[0], /At most 20 skills/);
+test("lists are kept short", () => {
+  const many = (n) => Array.from({ length: n }, (_, i) => `item${i}`);
+  const lines = (n) => many(n).map((title) => ({ title }));
+  const s = normalizeProfile({ skills: many(9).join(","), interests: many(6).join(","), achievements: lines(5) });
+  assert.equal(s.ok, false);
+  for (const re of [/At most 8 skills/, /At most 5 interests/, /At most 4 achievements/]) assert.ok(s.errors.some((e) => re.test(e)), String(re));
+  const f = normalizeProfile({ researchAreas: many(7).join(","), publications: lines(6) }, { faculty: true });
+  for (const re of [/At most 6 research areas/, /At most 5 papers/]) assert.ok(f.errors.some((e) => re.test(e)), String(re));
+  assert.equal(normalizeProfile({ skills: many(8).join(","), achievements: lines(4) }).ok, true);
 });
 
 test("one-item-per-line text round-trips", () => {
@@ -66,7 +75,6 @@ test("one-item-per-line text round-trips", () => {
     "Deep nets | IEEE Access | 2023 | https://doi.org/10.1/x\nOnly a title");
   const ach = parseLines("Won SIH 2024 | national finalist | 2024", "Achievement");
   assert.deepEqual(ach[0], { title: "Won SIH 2024", detail: "national finalist", year: "2024", url: "" });
-  assert.equal(formatLines([{ title: "Smart bin", detail: "", url: "https://example.org/a" }], "Work"), "Smart bin |  | https://example.org/a");
 });
 
 test("initials", () => {

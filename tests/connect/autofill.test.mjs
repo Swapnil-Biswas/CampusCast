@@ -91,11 +91,11 @@ test("faculty draft: real papers kept, invented ones dropped, invented links ref
   assert.ok(d.notes.some((n) => /1 paper was left out/.test(n)));
   assert.equal(d.fields.headline.flag, "check");
   assert.equal(d.fields.designation.flag, "read");
-  assert.equal(d.fields.skills.value, "python, tensorflow");
+  assert.equal(d.fields.researchAreas.value, "machine learning");
+  assert.equal(d.fields.skills, undefined);
   assert.equal(d.fields.linkedin.value, "https://www.linkedin.com/in/meera-iyer");
   assert.equal(d.fields.github, undefined);
-  assert.equal(d.fields.website, undefined);
-  for (const empty of ["about", "goals", "interests", "work", "career", "achievements"]) assert.equal(d.fields[empty], undefined, empty);
+  for (const empty of ["about", "goals", "interests", "work", "career", "achievements", "website", "openTo"]) assert.equal(d.fields[empty], undefined, empty);
 });
 
 test("a cut-off link is not accepted just because it begins like a real one", () => {
@@ -108,13 +108,28 @@ test("a cut-off link is not accepted just because it begins like a real one", ()
 test("a student never gets faculty fields", () => {
   const d = buildDraft(answer, { faculty: false, sourceText: SOURCE, verifiable: true });
   for (const k of ["designation", "researchAreas", "publications", "work", "career", "openTo"]) assert.equal(d.fields[k], undefined, k);
+  assert.equal(d.fields.skills.value, "python, tensorflow");
+});
+
+test("a long resume is cut down to the essentials", () => {
+  const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
+  const d = buildDraft({ profile: { headline: f("h".repeat(400)), about: f("everything"), skills: f(many(30, (i) => `s${i}`)), interests: f(many(12, (i) => `i${i}`)), goals: f("g".repeat(900)), achievements: f(many(15, (i) => ({ title: `a${i}`, detail: "d".repeat(500) }))) } }, {});
+  assert.deepEqual(Object.keys(d.fields).sort(), ["achievements", "goals", "headline", "interests", "skills"]);
+  assert.equal(d.fields.headline.value.length, 120);
+  assert.equal(d.fields.goals.value.length, 240);
+  assert.equal(d.fields.skills.value.split(", ").length, 8);
+  assert.equal(d.fields.interests.value.split(", ").length, 5);
+  const lines = d.fields.achievements.value.split("\n");
+  assert.equal(lines.length, 4);
+  assert.ok(lines[0].length < 140);
+  assert.equal(normalizeProfile({ ...Object.fromEntries(Object.entries(d.fields).map(([k, x]) => [k, x.value])), achievements: parseLines(d.fields.achievements.value, "Achievement") }).ok, true);
 });
 
 test("one broken field does not empty the form, and private details are stripped from the answer", () => {
-  const d = buildDraft({ profile: { headline: f(12345), about: f("Reach me on 9876543210 or a@b.com. I build web apps."), skills: f("not a list"), achievements: f([null, 7, { title: "Won | Smart India Hackathon", detail: "USN: 1BY25CS001", year: 3000, url: "http://x.example" }]) } }, {});
+  const d = buildDraft({ profile: { headline: f(12345), goals: f("Reach me on 9876543210 or a@b.com. I build web apps."), skills: f("not a list"), achievements: f([null, 7, { title: "Won | Smart India Hackathon", detail: "USN: 1BY25CS001", year: 3000, url: "http://x.example" }]) } }, {});
   assert.equal(d.fields.headline, undefined);
-  assert.ok(!/9876|@/.test(d.fields.about.value));
-  assert.match(d.fields.about.value, /web apps/);
+  assert.ok(!/9876|@/.test(d.fields.goals.value));
+  assert.match(d.fields.goals.value, /web apps/);
   assert.equal(d.fields.skills, undefined);
   assert.equal(d.fields.achievements.value, "Won / Smart India Hackathon");
   assert.ok(d.notes.some((n) => /Private details/.test(n)));
