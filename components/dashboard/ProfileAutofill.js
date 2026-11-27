@@ -113,7 +113,7 @@ export default function ProfileAutofill({ userId, files: stored, reading, aiRead
       {result && (
         <div className={`form-msg${result.error ? " err" : ""}`} role="status">
           {result.error && <p><b>The reading did not fully work.</b> {result.error}</p>}
-          <p>{result.filled.length ? <>Filled below, marked <b>Check</b>: {result.filled.map((k) => FIELD_LABELS[k]).join(", ")}. Check them, then press <b>Confirm and save</b>.</> : "No empty field was filled."}</p>
+          <p>{result.filled.length ? <>Filled in your form, marked <b>Check</b>: {result.filled.map((k) => FIELD_LABELS[k]).join(", ")}. Check them, then press <b>Confirm and save</b>.</> : "No empty field was filled."}</p>
           {result.suggested.length > 0 && <p>You had already written: {result.suggested.map((k) => FIELD_LABELS[k]).join(", ")}. Nothing was changed there; the suggestions are shown under those fields.</p>}
           {(result.warnings?.length > 0 || result.notes?.length > 0) && <ul>{[...(result.warnings || []), ...(result.notes || [])].map((w, i) => <li key={i}>{w}</li>)}</ul>}
         </div>

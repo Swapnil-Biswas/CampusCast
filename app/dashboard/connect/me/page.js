@@ -36,11 +36,11 @@ export default async function MyConnectProfile() {
       <div className="page-head">
         <div>
           <h1>My Connect profile</h1>
-          <p>{faculty ? "Tell students what you research and where your work is going." : "Tell other students and faculty what you are good at and what you want to do."} Nothing is shown to anyone until you switch visibility on. {row && <Link className="link-btn" href={`/dashboard/connect/people/${user.id}`}>See how it looks to others</Link>}</p>
+          <p>{faculty ? "Just choose your position and add your LinkedIn. The rest is optional." : "Tell other students and faculty what you are good at and what you want to do."} Nothing is shown to anyone until you switch visibility on. {row && <Link className="link-btn" href={`/dashboard/connect/people/${user.id}`}>See how it looks to others</Link>}</p>
         </div>
       </div>
       {e2 && <p className="form-msg err">To fill your profile automatically from a resume, run <code>supabase/dashboard-10-connect-autofill.sql</code> in the Supabase SQL Editor.</p>}
-      <ConnectProfileForm p={row || {}} faculty={faculty} autofill={autofill} />
+      <ConnectProfileForm p={row || {}} faculty={faculty} email={user.email} isNew={!row} autofill={autofill} />
     </>
   );
 }

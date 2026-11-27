@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cleanTags, formatLines, initials, normalizeProfile, parseLines } from "../../lib/connect/profile.js";
+import { POSITIONS, cleanTags, formatLines, initials, matchPosition, normalizeProfile, parseLines } from "../../lib/connect/profile.js";
 
 test("tags are lower-cased, de-duplicated and capped", () => {
   assert.deepEqual(cleanTags("React, python\nReact ,  Machine   Learning", 20), ["react", "python", "machine learning"]);
@@ -80,4 +80,32 @@ test("one-item-per-line text round-trips", () => {
 test("initials", () => {
   assert.equal(initials("Asha Rao K"), "AR");
   assert.equal(initials(""), "?");
+});
+
+test("faculty choose a position from the list", () => {
+  assert.equal(normalizeProfile({ designation: "Associate Professor" }, { faculty: true }).row.designation, "Associate Professor");
+  const typed = normalizeProfile({ designation: "Supreme Wizard" }, { faculty: true });
+  assert.equal(typed.ok, false);
+  assert.match(typed.errors[0], /from the list/);
+});
+
+test("a visible faculty profile needs only a position and LinkedIn", () => {
+  const none = normalizeProfile({ visible: true }, { faculty: true });
+  assert.equal(none.ok, false);
+  assert.equal(none.errors.length, 2, none.errors.join(" | "));
+  const ok = normalizeProfile({ visible: true, showEmail: true, designation: "Professor", linkedin: "linkedin.com/in/sample-prof" }, { faculty: true });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.row.show_email, true);
+  assert.equal(normalizeProfile({ visible: false }, { faculty: true }).ok, true);   // a hidden draft can be saved empty
+  assert.equal(normalizeProfile({ visible: true }).ok, true);                       // students are unchanged
+});
+
+test("written job titles are matched to the list", () => {
+  for (const [written, want] of [
+    ["Associate Professor, Department of ISE", "Associate Professor"], ["Asst. Prof.", "Assistant Professor"], ["Assoc. Professor", "Associate Professor"],
+    ["Professor", "Professor"], ["Professor & Head of the Department", "Professor and Head of Department"], ["HOD, CSE", "Head of Department"],
+    ["Associate Professor and HOD", "Head of Department"], ["Dean (Academics)", "Dean"], ["Principal", "Principal"], ["Principal Investigator and Assistant Professor", "Assistant Professor"],
+    ["Visiting Professor", "Visiting / Adjunct Faculty"], ["Software Engineer", ""], ["", ""],
+  ]) assert.equal(matchPosition(written), want, written);
+  for (const p of POSITIONS) assert.equal(matchPosition(p), p);
 });
