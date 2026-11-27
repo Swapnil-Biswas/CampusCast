@@ -314,6 +314,10 @@
 .connect-nav { margin-bottom: 8px; }
 .connect-form { max-width: 640px; display: grid; gap: 14px; }
 .connect-form .check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+.more > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.more[open] { display: grid; gap: 14px; }
+details.connect-form { margin-top: 18px; }
+.connect-form input[readonly] { opacity: .75; }
 .autofill { max-width: 640px; display: grid; gap: 12px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 14px; padding: 16px; margin-bottom: 22px; }
 .autofill h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 18px; font-family: var(--font-d); }
 .autofill p { margin: 0; }
