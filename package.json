@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test:exams": "node --test \"tests/exams/*.test.mjs\"",
+    "test:connect": "node --test \"tests/connect/*.test.mjs\"",
     "test:hackathons": "node --test \"tests/hackathons/*.test.mjs\""
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "web-push": "^4.0.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.6.0",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4"
   }

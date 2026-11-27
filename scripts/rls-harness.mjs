@@ -3,7 +3,8 @@
 import { connect } from "./db.mjs";
 
 export async function run(name, body) {
-  const c = await connect();
+  // supabase/tests/runtest.mjs supplies an in-memory database; otherwise connect to the live project (needs PGPASSWORD).
+  const c = globalThis.__campusTestClient ? await globalThis.__campusTestClient() : await connect();
   let pass = 0, fail = 0;
   const log = [];
   await c.query("begin");

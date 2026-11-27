@@ -148,7 +148,7 @@ Signed-in, ID-verified students land on `/dashboard`. Everything is stored in Su
 | --- | --- |
 | Home feed, Saved, Calendar | Notices ranked Now > Today > Soon > FYI, filters, search, read receipts, acknowledgement of Now notices, bookmarks, reminders, `.ics` download |
 | Official | Department circulars, exams (any change is re-announced as Now), workshops with seat cap, waitlist and CSV export, hackathons, cultural events and clubs |
-| Community | Connect (teammates), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
+| Community | Connect (teammates, student and faculty profiles linked to LinkedIn), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
 | Admin | Publish notices (scheduled, expiring, audience preview), reach analytics, ID verification, moderation, people and roles, clubs, audit log |
 | Alerts | Live in-app bell, email for Now/Today notices and reminders, browser push, daily 7 am digest, quiet hours |
 
@@ -246,3 +246,42 @@ Clubs, societies and other organisers post hackathons for college students. A cl
 **Known limits:** a poster is only as readable as the picture; the AI marks end times it had to guess and the clock times it could not read, and a person must check them. The old per-record editor is no longer used for hackathons (it still exists for other record types). Hackathons are for all students: there is no department or semester filter.
 
 **If the hackathon form comes up empty after the AI reads a poster:** the editor now says why (usually that `supabase/dashboard-8-hackathons.sql` was not fully run, so some columns are missing). Every field that can be saved is saved, and the rest are named. After fixing it, press **Fill the form from the AI reading** in the editor; it refills the form from the saved reading without calling the AI again.
+
+## Connect: student and faculty profiles
+
+Connect has two halves. **Teammates** is the original board for finding people for a project or hackathon. **Students** and **Faculty** are a directory of profiles, so students can see what others are good at and what each professor researches and where their career is going. A profile points to **LinkedIn** for any further contact: there is no chat inside CampusCast.
+
+| Page | What it does |
+|---|---|
+| Dashboard > Connect > **Students** / **Faculty** | Directory with search (name, headline, skills, interests, research areas), department filter and a skill / research-area filter, 24 per page. |
+| `/dashboard/connect/people/<id>` | One profile. Only the essentials, so it can be read at a glance. Everyone: name, headline, a **Message on LinkedIn** button that opens in a new tab, optional GitHub, and Report / Block. **Students:** department and year, up to 8 top skills, 4 key achievements, 5 interests and a one or two sentence goal. **Faculty:** designation, up to 6 research areas, 5 main papers (with links) and a short note on where their work is heading. Empty sections are hidden. The limits are in `lib/connect/profile.js`. |
+| Dashboard > Connect > **My profile** | Edit your own profile and switch visibility on or off. Faculty see the faculty fields. |
+
+**Privacy:** a profile is **hidden until its owner switches visibility on**. Only signed-in, ID-verified college users can see anyone (the college-email rule is enforced at sign-up), and a blocked pair never sees each other. Admins get no extra view of a hidden profile. A person's college email is shown only if they tick *Also show my college email*; **no phone number is collected at all**, and the USN, ID card and review notes are never returned. Other people are read only through two database functions (`people_directory`, `person_profile`) that return a fixed set of fields. Nothing is invented: a section with no content is not shown, and an empty profile says so.
+
+**Student or faculty:** `profiles.person_type` is `student` by default. Only a **super-admin** can change it (Dashboard > Admin > People & roles > *Connect* column), and the change is written to the audit log, so nobody can present themselves as faculty. Faculty-only fields are emptied by the database for anyone who is not faculty.
+
+**LinkedIn and other links:** an address must be `https`, on `linkedin.com` (or a country site such as `in.linkedin.com`), and look like `/in/<name>`. It is saved in one tidy form, `https://www.linkedin.com/in/<name>`, with tracking parameters removed. `http`, `javascript:`, look-alike hosts (`linkedin.com.evil.example`), `user@host` tricks, ports and company pages are refused with a message. GitHub must be `github.com/<name>`. A paper link must be `https` with a real host name (no `localhost`, IP addresses or `.local`). The same rules are enforced again by the database. External links open with `rel="noopener noreferrer nofollow"`.
+
+**Setup:** run `supabase/dashboard-9-connect-people.sql` in the Supabase SQL Editor (after `setup.sql` and dashboard-1, -4 and -6; safe to re-run). Mark a professor as faculty in People & roles (a super-admin), then ask them to fill in their profile.
+
+**Tests:** `npm run test:connect` (link and profile validation) and `node supabase/tests/stage9.mjs` (81 database checks: opt-in, blocks, no leaked email or USN, who may set faculty, link and size constraints, search and filters). `node supabase/tests/runtest.mjs supabase/tests/stage9.mjs` runs the same checks on an in-memory Postgres (PGlite, `npm install` first) with no database password.
+
+**Known limits:** no profile photo (an initials avatar is shown), no in-app messaging, and a faculty member who is not yet ID-verified cannot appear because only verified accounts are listed.
+
+### Filling a profile automatically
+
+On **My profile**, a person can give a **resume** (PDF or photo, up to 8 MB), their **LinkedIn "Save to PDF" file** or pasted profile text, and their **GitHub username**. The AI (the same providers and fallback as the exam notices) drafts the form; the person checks it and presses **Confirm and save**.
+
+- **LinkedIn is never scraped.** Its pages need a login and its terms forbid it, so CampusCast only reads what the person exports or pastes. The LinkedIn address stays a link.
+- **GitHub** is read through the official public API with no token (name, bio, own repositories and their languages; never the email). Without a token GitHub allows 60 requests an hour per server; a clear message says when to retry.
+- **Nothing is saved or shown by a reading.** It fills only empty fields, marked **Check**. A field the person already wrote is left alone and gets a suggestion (add the new items, replace, or keep). Visibility is never changed.
+- **Short:** the AI is asked for the most important items only, and the server cuts the draft to the profile limits. The rest of the resume is left out.
+- **Not invented:** the AI is told to record only what is written. When every source was text, a research paper whose title is not in the documents is dropped, as is a venue or link that cannot be found. A photo or scanned file cannot be checked this way, and the page says to compare it.
+- **Private details** (phone, email, address, date of birth, USN and similar) are removed from text before it is sent to the AI and again from the AI's answer. A photo or scan goes to the AI as it is; only the answer can be cleaned. Detection is pattern-based, so the person should still read what was filled in. The AI service receives the document, and free services may keep what they receive; the page says so.
+- **Files** are in the private `profile-files` bucket, visible only to their owner (not to admins), with **Remove** and **Delete my files and reading** buttons. Deleting an account does not delete storage files by itself.
+- At most **8 readings an hour** per person. "Fill again from the last reading" does not call the AI.
+
+**Setup:** run `supabase/dashboard-10-connect-autofill.sql` in the Supabase SQL Editor after dashboard-9, and set `GEMINI_API_KEY` (needed for photos and scans) or another AI key.
+
+**Tests:** `npm run test:connect` and `node supabase/tests/stage10.mjs` (or `node supabase/tests/runtest.mjs supabase/tests/stage10.mjs dashboard-10-connect-autofill.sql`).
