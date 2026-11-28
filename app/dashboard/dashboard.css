@@ -414,3 +414,22 @@
 .hk-places li div { min-width: 0; }
 .hk-places small { display: block; opacity: .7; }
 @media (max-width: 640px) { .hk-map { height: 240px; } .hk-places li { flex-direction: column; align-items: stretch; } }
+
+/* notes and question papers */
+.pp-filters { display: grid; gap: 10px; margin-bottom: 18px; padding: 14px 16px; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; }
+.pp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.pp-lab { flex: 0 0 96px; font-size: 13px; font-weight: 600; opacity: .7; }
+.pp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-chips .chip { color: var(--ink); text-decoration: none; cursor: pointer; }
+.pp-chips .chip.on { color: var(--cream); }
+.pp-num { min-width: 38px; justify-content: center; }
+.pp-select { flex: 1 1 220px; min-width: 0; max-width: 460px; font: inherit; color: inherit; background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 10px; }
+.pp-group h2 { font-family: var(--font-d); font-size: 22px; margin: 18px 0 10px; }
+.pp-code { font-family: var(--font-d); font-size: 15px; }
+.pp-card a.btn-s { text-decoration: none; color: var(--ink); }
+.pp-card a.btn-s.clay { color: #fff; }
+.pp-pages { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.pp-pages li > span { margin-right: 8px; overflow-wrap: anywhere; }
+.pp-busy { display: flex; align-items: center; gap: 8px; margin: 0; }
+.pp-privacy { font-size: 13px; opacity: .75; margin: 10px 0 0; }
+@media (max-width: 560px) { .pp-lab { flex-basis: 100%; } .pp-select { max-width: none; } }

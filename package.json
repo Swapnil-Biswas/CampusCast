@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test:exams": "node --test \"tests/exams/*.test.mjs\"",
+    "test:papers": "node --test \"tests/papers/*.test.mjs\"",
     "test:hackathons": "node --test \"tests/hackathons/*.test.mjs\""
   },
   "dependencies": {

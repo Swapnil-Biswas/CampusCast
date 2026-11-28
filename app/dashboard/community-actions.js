@@ -59,25 +59,6 @@ export async function connectContact(requestId) {
 }
 
 // ---------- notes and papers ----------
-export async function createNote(input) {
-  const { supabase } = await requireVerified();
-  const row = {
-    kind: input.kind === "paper" ? "paper" : "notes", title: str(input.title, 140), subject: str(input.subject, 80),
-    semester: Number(input.semester), branch: str(input.branch, 80) || null, description: str(input.description, 1000) || null,
-    file: input.file, sha256: str(input.sha256, 64),
-  };
-  if (row.title.length < 3 || row.subject.length < 2) return { error: "Add a title and a subject." };
-  if (!(row.semester >= 1 && row.semester <= 8)) return { error: "Pick a semester." };
-  if (!row.file?.path || !/^[0-9a-f]{64}$/.test(row.sha256)) return { error: "Attach a file first." };
-  const { error } = await supabase.from("notes").insert(row);
-  if (error?.code === "23505") return { error: "This exact file has already been uploaded.", duplicate: true };
-  return error ? fail(error) : done("/dashboard/notes");
-}
-export async function deleteNote(id) {
-  const { supabase } = await requireVerified();
-  const { error } = await supabase.from("notes").delete().eq("id", id);
-  return error ? fail(error) : done("/dashboard/notes");
-}
 export async function toggleVote(noteId, on) {
   const { supabase, user } = await requireVerified();
   const res = on ? await supabase.from("note_votes").upsert({ note_id: noteId, user_id: user.id }, { onConflict: "note_id,user_id", ignoreDuplicates: true })

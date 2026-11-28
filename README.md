@@ -246,3 +246,14 @@ Clubs, societies and other organisers post hackathons for college students. A cl
 **Known limits:** a poster is only as readable as the picture; the AI marks end times it had to guess and the clock times it could not read, and a person must check them. The old per-record editor is no longer used for hackathons (it still exists for other record types). Hackathons are for all students: there is no department or semester filter.
 
 **If the hackathon form comes up empty after the AI reads a poster:** the editor now says why (usually that `supabase/dashboard-8-hackathons.sql` was not fully run, so some columns are missing). Every field that can be saved is saved, and the rest are named. After fixing it, press **Fill the form from the AI reading** in the editor; it refills the form from the saved reading without calling the AI again.
+
+## Notes and question papers
+
+Students share old question papers and class notes. Juniors pick a department, semester, exam (IA 1, IA 2, IA 3, Final) and course.
+
+1. Run `supabase/dashboard-11-notes-papers.sql` in the Supabase SQL Editor (safe to re-run).
+2. For AI auto-fill, set one of the AI keys used for exam notices (`GEMINI_API_KEY` reads scans and photos).
+3. Optional: set `SUPABASE_SERVICE_ROLE_KEY` (server only) so a clearly read question paper goes live at once. Without it, an admin approves every upload. Class notes are always approved by an admin.
+
+Photos are turned into one PDF in the browser, which also drops location data. Word and PowerPoint files are not read by AI.
+Tests: `npm run test:papers` and `supabase/tests/stage11.mjs`.

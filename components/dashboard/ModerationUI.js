@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Check, Download, Trash2, X } from "lucide-react";
 import { resolveReport, reviewNote } from "../../app/dashboard/community-actions";
-import { signedUrl } from "../../app/dashboard/actions";
+import { EXAM_LABEL } from "../../lib/papers/constants";
 import { useAct } from "./Common";
 
 const KIND = { connect_post: "Connect post", note: "Note", listing: "Listing", message: "Chat message", user: "Student" };
@@ -26,19 +26,19 @@ export function ReportRow({ r }) {
   );
 }
 
-export function PendingNote({ n, uploader }) {
-  const { msg, setMsg, pending, act } = useAct();
+export function PendingNote({ n, uploader, reasons }) {
+  const { msg, pending, act } = useAct();
   const [why, setWhy] = useState("");
-  const open = async () => { const r = await signedUrl("notes", n.file.path); if (r.url) window.open(r.url, "_blank", "noopener"); else setMsg(r.error); };
   return (
     <article className="notice" style={{ "--u": "#8ec5d6" }}>
-      <div className="notice-top"><span className="pill soft" style={{ "--c": "#8ec5d6" }}>{n.kind === "paper" ? "Previous paper" : "Notes"}</span><span className="pill soft" style={{ "--c": "#d9c8a8" }}>Sem {n.semester}</span></div>
+      <div className="notice-top"><span className="pill soft" style={{ "--c": "#8ec5d6" }}>{n.kind === "paper" ? "Previous paper" : "Notes"}</span><span className="pill soft" style={{ "--c": "#d9c8a8" }}>Sem {n.semester}</span><span className="pill soft" style={{ "--c": "#d9c8a8" }}>{n.branch || "All departments"}</span>{n.exam_type && <span className="pill soft" style={{ "--c": "#f3b63f" }}>{EXAM_LABEL[n.exam_type]} {n.exam_year}</span>}</div>
       <h3 className="notice-title">{n.title}</h3>
       <p className="audience">{n.subject} · from {uploader || "a student"}</p>
       {n.description && <p>{n.description}</p>}
+      {reasons?.length > 0 && <p className="inline-msg">AI check: {reasons.join(" ")}</p>}
       <div className="field"><label htmlFor={"nr" + n.id}>Reason <small>(required to reject)</small></label><input id={"nr" + n.id} type="text" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} placeholder="e.g. Not related to the subject" /></div>
       <div className="notice-actions">
-        <button className="btn-s" onClick={open}><Download size={16} /> Open file</button>
+        <a className="btn-s" href={`/api/papers/file/${n.id}`} target="_blank" rel="noopener noreferrer"><Download size={16} /> Open file</a>
         <button className="btn-s clay" disabled={pending} onClick={() => act(() => reviewNote(n.id, true))}><Check size={16} /> Approve</button>
         <button className="btn-s" disabled={pending} onClick={() => act(() => reviewNote(n.id, false, why))}><X size={16} /> Reject</button>
         {msg && <span className="inline-msg" role="alert">{msg}</span>}
