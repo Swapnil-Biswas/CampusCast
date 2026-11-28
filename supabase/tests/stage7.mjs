@@ -136,7 +136,7 @@ await run("Stage 7: approvers (HOD / cluster head), reminders, PDF retention", a
   const at = (interval) => `(select (now() + interval '${interval}') at time zone 'Asia/Kolkata')`;
   const nowRow = async (id, interval, over = {}) => t.admin(
     `insert into public.exam_timetable_entries (notice_id, department, semester, category, subject_name, subject_code, exam_date, start_time, end_time, session)
-     select $1, $2, $3, 'ia2', $4, $5, x::date, date_trunc('minute', x)::time, (date_trunc('minute', x) + interval '90 minutes')::time, 'FN' from ${at(interval)} as t(x) returning id`,
+     select $1, $2, $3, 'ia2', $4, $5, x::date, date_trunc('minute', x)::time, null, 'FN' from ${at(interval)} as t(x) returning id`,
     [id, over.department ?? AIML, over.semester ?? 2, over.subject ?? "Data Structures", over.code ?? "21CS32"]).then((r) => r.rows[0].id);
 
   const rn = await mk({ status: "published", title: "Reminder notice", sems: null });   // all semesters: rows decide
