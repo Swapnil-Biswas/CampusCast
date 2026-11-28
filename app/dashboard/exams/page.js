@@ -36,7 +36,7 @@ export default async function Exams({ searchParams }) {
   const ids = inTab.map((n) => n.id);
   const [{ data: entries }, { data: docs }] = ids.length ? await Promise.all([
     supabase.from("exam_timetable_entries").select("*").in("notice_id", ids),
-    supabase.from("exam_documents").select("id, notice_id, original_filename, page_count, deleted_at").in("notice_id", ids).order("created_at"),
+    supabase.from("exam_documents").select("id, notice_id, original_filename, page_count, mime_type, deleted_at").in("notice_id", ids).order("created_at"),
   ]) : [{ data: [] }, { data: [] }];
   const rowsOf = (id) => sortRows(rowsForStudent((entries || []).filter((e) => e.notice_id === id), { branch: profile.branch, semester }));
   // The notice with the nearest coming exam goes first; finished ones follow, most recent first.
@@ -112,10 +112,10 @@ export default async function Exams({ searchParams }) {
 
                 <div className="notice-actions">
                   {noticeDocs.map((d) => d.deleted_at ? (
-                    <span key={d.id} className="inline-msg">The original PDF was removed some days after the exams ended. The details here are kept.</span>
+                    <span key={d.id} className="inline-msg">The original file was removed some days after the exams ended. The details here are kept.</span>
                   ) : (
                     <span key={d.id} className="doc-actions">
-                      <a className="btn-s" href={`/api/exams/pdf/${d.id}`} target="_blank" rel="noreferrer"><FileText size={14} /> View original PDF <ExternalLink size={12} /></a>
+                      <a className="btn-s" href={`/api/exams/pdf/${d.id}`} target="_blank" rel="noreferrer"><FileText size={14} /> View original {d.mime_type?.startsWith("image/") ? "photo" : "PDF"} <ExternalLink size={12} /></a>
                       <a className="btn-s" href={`/api/exams/pdf/${d.id}?download=1`}><Download size={14} /> Download</a>
                     </span>
                   ))}

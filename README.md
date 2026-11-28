@@ -148,7 +148,7 @@ Signed-in, ID-verified students land on `/dashboard`. Everything is stored in Su
 | --- | --- |
 | Home feed, Saved, Calendar | Notices ranked Now > Today > Soon > FYI, filters, search, read receipts, acknowledgement of Now notices, bookmarks, reminders, `.ics` download |
 | Official | Department circulars, exams (any change is re-announced as Now), workshops with seat cap, waitlist and CSV export, hackathons, cultural events and clubs |
-| Community | Connect (teammates), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
+| Community | Connect (teammates, student and faculty profiles linked to LinkedIn), notes and previous papers (moderated, duplicate check), CampusXchange with live chat, free mentorship with sessions and ratings, reports and blocks |
 | Admin | Publish notices (scheduled, expiring, audience preview), reach analytics, ID verification, moderation, people and roles, clubs, audit log |
 | Alerts | Live in-app bell, email for Now/Today notices and reminders, browser push, daily 7 am digest, quiet hours |
 
@@ -192,6 +192,8 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 3. A central admin makes each staff member an Admin (People & roles), then ticks their departments under **Exam notice access**: **Uploads for** (information staff) and **Approves for** (head of department / cluster head). Or in SQL: `select public.set_admin_depts('<user id>', array['AI & Machine Learning']);` and `select public.set_approver_depts('<user id>', array['AI & Machine Learning']);`. An admin with no departments cannot upload or approve.
 4. Optional: set a student's semester by hand (`profiles.semester`); otherwise it is worked out from their batch (Aug to Jan odd semester, Feb to Jul even).
 
+**PDFs and photos:** a notice can be uploaded as a PDF or as a **JPG, PNG or WebP photo** (for example a circular shared as a picture in a WhatsApp group). Photos are read by Gemini (or Claude); Groq only reads PDFs with text, so it steps aside for photos. HEIC photos are not supported: share or save them as JPG. The file type is judged from the file's own first bytes, never its name.
+
 **How the AI step stays safe**
 - The browser uploads to the private `exam-pdfs` bucket; the server re-checks the file (real PDF, not password-protected, not cut off, 20 MB maximum) and `/api/exams/extract` sends it to Claude in the background. The PDF is sent as a document, so typed and scanned pages are both read.
 - The model must answer through a fixed structure that records, for every detail, whether the PDF states it, whether it was inferred, or whether it is missing, with page numbers and a short quote.
@@ -200,8 +202,8 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Students are notified only when a notice is published.
 
 **Tests**
-- `npm run test:exams`: 133 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
-- `supabase/tests/stage6.mjs`: 118 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
+- `npm run test:exams`: 156 checks (PDF checks, answer checking, AI request, filling the draft, a whole extraction run, save and decision rules, student views). No network or API key needed.
+- `supabase/tests/stage6.mjs`: 119 checks of database access rules, the workflow and re-run safety (needs `PGPASSWORD`, like the other stage tests).
 - `supabase/tests/stage7.mjs`: 90 checks of the approver hierarchy, self-approval blocking, notifications to approvers, reminders (windows, duplicates, department and semester matching) and PDF retention.
 
 **Try it for real (checklist)**
@@ -211,6 +213,7 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 4. As a student of that department and semester, open Examinations: see the notice, view and download the PDF, and find the notification. As a student of another department, confirm you see nothing.
 
 **Known limits**
+- A photo can only be as good as the picture: blurry, cropped or very dark photos give uncertain results, flagged "Check". "Special Examination" is only set when the notice's own words say supplementary, practical, laboratory or revaluation; the AI's label alone is not enough.
 - Free tiers: Groq's free limits are small (a long PDF may be refused), it cannot read scanned PDFs, and the PDF text it sees may flatten tables. Both providers send the notice to a third party, so upload only official public notices. Gemini's free tier: rate limited (a busy answer can be retried), PDFs over about 14 MB are refused, and Google may use free-tier content to improve its products, so upload only official public notices. Accuracy on real BMSIT PDFs has not been measured for either provider.
 - Never run against a real Anthropic key, real BMSIT PDFs or a live Supabase when this was written: the logic is tested with fakes and an in-memory Postgres, not end to end.
 - A PDF over 100 pages, or a timetable too long for one answer, is refused with a message asking to split it. Reading runs in the background for up to 5 minutes (`maxDuration`); on a shorter hosting limit, long PDFs can fail and be retried.
@@ -218,3 +221,67 @@ Categories are exactly **IA 1, IA 2, IA 3, Final Examination** (plus Special Exa
 - Timetable rows without a department or semester apply to everyone the notice is for.
 - The older `exams` table is kept only for reading under "Earlier postings"; new exam information goes through the approval path.
 - Changing a published notice means archiving it and submitting a new one; there is no edit-after-publish.
+
+## Hackathons (posted by clubs, read by the AI, no approval step)
+
+Clubs, societies and other organisers post hackathons for college students. A club admin uploads the poster or brochure (a PDF, or a photo such as one shared on WhatsApp); CampusCast reads it with the same AI as the exam notices, fills in a **draft**, and the club admin checks it and presses **Publish**. Nobody else has to approve. The AI only fills the draft: it cannot publish. **No notifications or emails are sent about hackathons** (by design).
+
+| Who | Where | What they can do |
+|---|---|---|
+| Club admin (a student or staff member made admin of a club), or an admin | Dashboard > Hackathons > **Post a hackathon** | Upload a poster, review the AI's draft (anything unclear is marked **Check**), edit every detail, publish, unpublish, cancel, delete a draft. Club admins only for their own club(s). |
+| Student | Dashboard > **Hackathons** | Search and filter; see each hackathon's status and live countdown; open the full details; mark **Interested**; find teammates; add it to their calendar. |
+
+**What students see for each hackathon:** name, tagline, organiser, theme, mode (online / on campus / hybrid), **prize pool** and each prize, **venue** (with a map link if given), start and end, registration opens / closes, team size, entry fee, eligibility, tracks, perks, rules, sponsors, the **programme minute by minute** (it follows the clock: *Happening now*, *Up next*, and what is over is dimmed), the **organiser's contact** (call, WhatsApp, email, copy number, only if the organisers gave one), the poster or brochure, a **direct link to the official website** (and the registration page) that **opens in a new window**, so students never have to scan a QR code and leave CampusCast, a **Register** button while registration is open, **Add to calendar** (a `.ics` with the event, the registration deadline and every programme item), and a WhatsApp share. A live **days : hours : minutes : seconds countdown** shows what is next: registration opens, registration closes, the start, or the end while it is live. Missing core details are shown as "Not stated" / "To be announced" instead of being hidden, so students are not left guessing.
+
+**Setup:** run `supabase/dashboard-8-hackathons.sql` in the Supabase SQL Editor (after dashboard-1, -3 and the others; safe to re-run). It adds the new details to `hackathons`, the poster and AI-reading tables, the private `hackathon-files` bucket (PDF and photos), and the access rules. Make someone a club admin by adding them to a club in `club_admins` (central admin, People & roles / SQL). The AI keys are the same as for exams (`GEMINI_API_KEY`, etc.).
+
+**Organisers:** the college's 23 clubs, societies and chapters (Coding Club, GenAI Club, OSCode Club, ASTRA Club, AR/VR Hub, E-Yantra Club, the seven IEEE societies, IETE, ISTE, BMESI, ICE Student Chapter, Motorheads, Access Denied, Money Plant, Alterino, Epoch Society and NODE) are added by `dashboard-8-hackathons.sql`. In the editor, the **Organising club** list has them all, plus **Out of college: another college or organisation** for a hackathon run by another college (an admin, for example the college information department, picks this and types the organiser's name). The organiser's name **follows the club** automatically, except for the IEEE societies, where the admin types the IEEE student branch. Students can filter by **Organised by** (a club, or other colleges).
+
+**Hackathons outside BMSIT (another college or place):** a hackathon can be marked **outside the campus** (for example one at CMRIT). The AI flags it when the poster's venue is not BMSIT; the admin can switch it on or off, type the address, and **pin the venue on the map** by searching for its name or by pasting a Google Maps link (short `maps.app.goo.gl` links work). CampusCast measures the **road distance and driving time from BMSIT** when the form is saved (OpenStreetMap's search and the public OSRM routers, both free and key-less; if they are down it falls back to the straight-line distance and says so). Students then see **"Outside the BMSIT campus · 37 km from BMSIT by road"**, a **Getting there** section with **Directions from BMSIT** and **By bus or metro** (Google Maps, opened in a new window with BMSIT already set as the start), an OpenStreetMap route link, and a small map of the venue on the page. The distances use no live traffic. The BMSIT point is in `lib/hackathons/geo.js` (`CAMPUS`). Needs the extra columns in `dashboard-8-hackathons.sql`.
+
+**How it is kept safe:** the AI's answer is re-checked by the server (`lib/hackathons/normalize.js`): dates and times are validated as India time, money must be a plain rupee amount, phone numbers and emails must look real, links must be `http(s)` (never `javascript:` or `data:`), the club must be one of the configured clubs, nothing is invented (the AI is told never to guess a link), and a total prize pool that was not printed is only added up from the listed prizes and flagged. What a club admin types in the editor is validated again on the server and by the database. **QR codes on a poster photo** are decoded by the server itself (`lib/hackathons/qr.js`, with `sharp` and `jsqr`), because AI models cannot read them reliably: the address inside becomes the website or registration link (the poster's caption, such as "Scan to register", decides which; a link printed on the poster is never replaced), is flagged **Check** so the club admin opens it and confirms, and only normal `http(s)` links are kept (never scripts, payment codes or Wi-Fi codes). QR decoding works on photos (JPG, PNG, WebP); a QR code inside a PDF is not decoded. Students can read only published or cancelled hackathons; drafts, extraction results and uploaded files of drafts are limited to the people who manage them.
+
+**Tests:** `npm run test:hackathons` (110 checks: venue search, road distance and Google Maps link handling, QR decoding from real generated posters, the AI answer checker, the editor's validation, the AI-reading run on a photo, status and countdown targets, ordering, the programme "now / next", phone and WhatsApp links, the calendar file) and `supabase/tests/stage8.mjs` (82 checks of the database rules, including the venue pin and route, drafts and publishing, documents, storage and that no notification is created).
+
+**Known limits:** a poster is only as readable as the picture; the AI marks end times it had to guess and the clock times it could not read, and a person must check them. The old per-record editor is no longer used for hackathons (it still exists for other record types). Hackathons are for all students: there is no department or semester filter.
+
+**If the hackathon form comes up empty after the AI reads a poster:** the editor now says why (usually that `supabase/dashboard-8-hackathons.sql` was not fully run, so some columns are missing). Every field that can be saved is saved, and the rest are named. After fixing it, press **Fill the form from the AI reading** in the editor; it refills the form from the saved reading without calling the AI again.
+
+## Connect: student and faculty profiles
+
+Connect has two halves. **Teammates** is the original board for finding people for a project or hackathon. **Students** and **Faculty** are a directory of profiles, so students can see what others are good at and what each professor researches and where their career is going. A profile points to **LinkedIn** for any further contact: there is no chat inside CampusCast.
+
+| Page | What it does |
+|---|---|
+| Dashboard > Connect > **Students** / **Faculty** | Directory with search (name, headline, skills, interests, research areas), department filter and a skill / research-area filter, 24 per page. |
+| `/dashboard/connect/people/<id>` | One profile. Only the essentials, so it can be read at a glance. Everyone: name, headline, a **Message on LinkedIn** button that opens in a new tab, optional GitHub, and Report / Block. **Students:** department and year, up to 8 top skills, 4 key achievements, 5 interests and a one or two sentence goal. **Faculty:** position, college email and LinkedIn. A faculty member picks the position from a list, the email comes from the account, and those two plus LinkedIn are all that is asked (position and LinkedIn are required before the profile can be shown). Optionally, behind *Add research details*: up to 6 research areas, 5 main papers (with links) and a short note on where their work is heading. Empty sections are hidden. The limits are in `lib/connect/profile.js`. |
+| Dashboard > Connect > **My profile** | Edit your own profile and switch visibility on or off. Faculty see the faculty fields. |
+
+**Privacy:** a profile is **hidden until its owner switches visibility on**. Only signed-in, ID-verified college users can see anyone (the college-email rule is enforced at sign-up), and a blocked pair never sees each other. Admins get no extra view of a hidden profile. A person's college email is shown only if they tick *Also show my college email*; **no phone number is collected at all**, and the USN, ID card and review notes are never returned. Other people are read only through two database functions (`people_directory`, `person_profile`) that return a fixed set of fields. Nothing is invented: a section with no content is not shown, and an empty profile says so.
+
+**Student or faculty:** `profiles.person_type` is `student` by default. Only a **super-admin** can change it (Dashboard > Admin > People & roles > *Connect* column), and the change is written to the audit log, so nobody can present themselves as faculty. Faculty-only fields are emptied by the database for anyone who is not faculty.
+
+**LinkedIn and other links:** an address must be `https`, on `linkedin.com` (or a country site such as `in.linkedin.com`), and look like `/in/<name>`. It is saved in one tidy form, `https://www.linkedin.com/in/<name>`, with tracking parameters removed. `http`, `javascript:`, look-alike hosts (`linkedin.com.evil.example`), `user@host` tricks, ports and company pages are refused with a message. GitHub must be `github.com/<name>`. A paper link must be `https` with a real host name (no `localhost`, IP addresses or `.local`). The same rules are enforced again by the database. External links open with `rel="noopener noreferrer nofollow"`.
+
+**Setup:** run `supabase/dashboard-9-connect-people.sql` in the Supabase SQL Editor (after `setup.sql` and dashboard-1, -4 and -6; safe to re-run). Mark a professor as faculty in People & roles (a super-admin), then ask them to fill in their profile.
+
+**Tests:** `npm run test:connect` (link and profile validation) and `node supabase/tests/stage9.mjs` (81 database checks: opt-in, blocks, no leaked email or USN, who may set faculty, link and size constraints, search and filters). `node supabase/tests/runtest.mjs supabase/tests/stage9.mjs` runs the same checks on an in-memory Postgres (PGlite, `npm install` first) with no database password.
+
+**Known limits:** no profile photo (an initials avatar is shown), no in-app messaging, and a faculty member who is not yet ID-verified cannot appear because only verified accounts are listed.
+
+### Filling a profile automatically
+
+On **My profile**, a person can give a **resume** (PDF or photo, up to 8 MB), their **LinkedIn "Save to PDF" file** or pasted profile text, and their **GitHub username**. The AI (the same providers and fallback as the exam notices) drafts the form; the person checks it and presses **Confirm and save**.
+
+- **LinkedIn is never scraped.** Its pages need a login and its terms forbid it, so CampusCast only reads what the person exports or pastes. The LinkedIn address stays a link.
+- **GitHub** is read through the official public API with no token (name, bio, own repositories and their languages; never the email). Without a token GitHub allows 60 requests an hour per server; a clear message says when to retry.
+- **Nothing is saved or shown by a reading.** It fills only empty fields, marked **Check**. A field the person already wrote is left alone and gets a suggestion (add the new items, replace, or keep). Visibility is never changed.
+- **Short:** the AI is asked for the most important items only, and the server cuts the draft to the profile limits. The rest of the resume is left out.
+- **Not invented:** the AI is told to record only what is written. When every source was text, a research paper whose title is not in the documents is dropped, as is a venue or link that cannot be found. A photo or scanned file cannot be checked this way, and the page says to compare it.
+- **Private details** (phone, email, address, date of birth, USN and similar) are removed from text before it is sent to the AI and again from the AI's answer. A photo or scan goes to the AI as it is; only the answer can be cleaned. Detection is pattern-based, so the person should still read what was filled in. The AI service receives the document, and free services may keep what they receive; the page says so.
+- **Files** are in the private `profile-files` bucket, visible only to their owner (not to admins), with **Remove** and **Delete my files and reading** buttons. Deleting an account does not delete storage files by itself.
+- At most **8 readings an hour** per person. "Fill again from the last reading" does not call the AI.
+
+**Setup:** run `supabase/dashboard-10-connect-autofill.sql` in the Supabase SQL Editor after dashboard-9, and set `GEMINI_API_KEY` (needed for photos and scans) or another AI key.
+
+**Tests:** `npm run test:connect` and `node supabase/tests/stage10.mjs` (or `node supabase/tests/runtest.mjs supabase/tests/stage10.mjs dashboard-10-connect-autofill.sql`).

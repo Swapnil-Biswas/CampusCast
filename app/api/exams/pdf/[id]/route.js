@@ -20,10 +20,10 @@ export async function GET(req, { params }) {
 
   const { data: doc } = await supabase.from("exam_documents").select("storage_path, original_filename, deleted_at").eq("id", id).maybeSingle();
   if (!doc) return deny(404, "Not found.");
-  if (doc.deleted_at) return deny(410, "The original PDF was removed some days after the exams ended.");
+  if (doc.deleted_at) return deny(410, "The original file was removed some days after the exams ended.");
 
   const download = new URL(req.url).searchParams.get("download") === "1";
-  const name = doc.original_filename.replace(/[^\w.\- ()]+/g, "_").slice(0, 120) || "exam-notice.pdf";
+  const name = doc.original_filename.replace(/[^\w.\- ()]+/g, "_").slice(0, 120) || "exam-notice";
   const { data, error } = await supabase.storage.from("exam-pdfs").createSignedUrl(doc.storage_path, 120, download ? { download: name } : undefined);
   if (error || !data?.signedUrl) return deny(404, "The file could not be opened.");
   return new Response(null, { status: 302, headers: { location: data.signedUrl, "cache-control": "no-store" } });

@@ -125,12 +125,12 @@ test("an extraction stuck in 'processing' for too long can be taken over", async
   assert.equal(w.extraction.status, "completed");
 });
 
-test("a stored file that is not a PDF fails before the AI is ever called", async () => {
+test("a stored file that is not a PDF or photo fails before the AI is ever called", async () => {
   const { w, supabase } = world({ pdf: Buffer.from("MZ this is an executable, not a pdf") });
   const { calls, fetchImpl } = fetcher(okResponse(goodRaw()));
   const out = await run(supabase, fetchImpl);
   assert.equal(out.state, "failed");
-  assert.equal(out.code, "not_pdf");
+  assert.equal(out.code, "unsupported");
   assert.equal(out.retryable, false);
   assert.equal(calls.length, 0);
   assert.equal(w.extraction.status, "failed");
@@ -201,4 +201,19 @@ test("a scanned or mixed document is recorded as needing OCR-style reading", asy
   await run(supabase, fetcher(okResponse({ ...goodRaw(), documentKind: "scanned" })).fetchImpl);
   assert.equal(w.extraction.ocr_used, true);
   assert.equal(w.extraction.result.sourceDocument.kind, "scanned");
+});
+
+test("a photo of a notice is read and saved like a scan, and the AI is told it is an image", async () => {
+  const photo = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(300, 7), Buffer.from([0xff, 0xd9])]);
+  const { w, supabase } = world({ pdf: photo });
+  const sent = [];
+  const fetchImpl = async (u, i) => { sent.push(JSON.parse(i.body)); return okResponse({ ...goodRaw(), documentKind: "digital" }); };
+  const out = await run(supabase, fetchImpl);
+  assert.deepEqual(out, { state: "completed" });
+  assert.equal(sent[0].messages[0].content[0].type, "image");
+  assert.equal(sent[0].messages[0].content[0].source.media_type, "image/jpeg");
+  assert.equal(w.extraction.ocr_used, true);
+  assert.equal(w.extraction.result.sourceDocument.kind, "scanned");
+  assert.equal(w.doc.page_count, 1);
+  assert.equal(w.notice.status, "draft");
 });

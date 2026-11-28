@@ -275,7 +275,7 @@ create table if not exists public.exam_documents (
   notice_id uuid not null references public.exam_notices (id) on delete cascade,
   storage_path text not null unique,            -- in the exam-pdfs bucket: <uploader id>/<file id>.pdf
   original_filename text not null,
-  mime_type text not null check (mime_type = 'application/pdf'),
+  mime_type text not null check (mime_type in ('application/pdf', 'image/jpeg', 'image/png', 'image/webp')),   -- a PDF, or a photo of the notice
   size_bytes bigint not null check (size_bytes between 1 and 20971520),
   sha256 text not null check (sha256 ~ '^[0-9a-f]{64}$'),   -- finds the same file uploaded twice
   page_count smallint check (page_count is null or page_count > 0),
@@ -284,6 +284,9 @@ create table if not exists public.exam_documents (
 );
 -- Set when the stored PDF is removed some days after the exams (see dashboard-7-exam-alerts.sql). The row stays.
 alter table public.exam_documents add column if not exists deleted_at timestamptz;
+-- Tables created before photos were allowed: widen the type check (re-running this file is enough).
+alter table public.exam_documents drop constraint if exists exam_documents_mime_type_check;
+alter table public.exam_documents add constraint exam_documents_mime_type_check check (mime_type in ('application/pdf', 'image/jpeg', 'image/png', 'image/webp'));
 create index if not exists exam_documents_notice_idx on public.exam_documents (notice_id);
 create index if not exists exam_documents_sha_idx on public.exam_documents (sha256);
 alter table public.exam_documents enable row level security;
@@ -546,7 +549,7 @@ grant execute on function public.exam_notice_transition(uuid, text, text) to aut
 -- 11. Private storage for the original PDFs
 -- ============================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('exam-pdfs', 'exam-pdfs', false, 20971520, array['application/pdf'])
+values ('exam-pdfs', 'exam-pdfs', false, 20971520, array['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 -- Admins upload into their own folder: exam-pdfs/<their user id>/<file>.pdf
