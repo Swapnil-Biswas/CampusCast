@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { requireAdmin, requireSuper } from "../../../../lib/dash/ctx";
 import { manageableDepartments } from "../../../../lib/exams/access";
 import { aiConfig } from "../../../../lib/exams/config";
-import { sniffPdf } from "../../../../lib/exams/pdf";
+import { sniffFile } from "../../../../lib/exams/pdf";
 import { STALE_PROCESSING_MS } from "../../../../lib/exams/constants";
 import { clean } from "../../../../lib/exams/normalize";
 import { isUuid, validateDecision, validateNotice, validateRows } from "../../../../lib/exams/validate";
@@ -34,7 +34,7 @@ export async function registerExamUpload({ path, filename, departments, allowDup
   };
 
   const folder = `${user.id}/`;
-  if (typeof path !== "string" || !path.startsWith(folder) || !/^[0-9a-f-]{36}\.pdf$/i.test(path.slice(folder.length))) return { error: "Invalid upload." };
+  if (typeof path !== "string" || !path.startsWith(folder) || !/^[0-9a-f-]{36}\.(pdf|jpg|png|webp)$/i.test(path.slice(folder.length))) return { error: "Invalid upload." };
 
   const allowed = await manageableDepartments(supabase, user.id, isSuper);
   const allowedNames = new Set(allowed.map((d) => d.name));
@@ -50,22 +50,23 @@ export async function registerExamUpload({ path, filename, departments, allowDup
   const { data: file, error: dlErr } = await supabase.storage.from(BUCKET).download(path);
   if (dlErr || !file) return { error: "The upload was not found. Please try again." };
   const bytes = Buffer.from(await file.arrayBuffer());
-  const sniff = sniffPdf(bytes);
+  const sniff = sniffFile(bytes);
   if (!sniff.ok) return fail(sniff.message);
+  if (!path.toLowerCase().endsWith(`.${sniff.ext}`)) return fail("The file does not match its type. Please upload it again.");
   const sha = createHash("sha256").update(bytes).digest("hex");
 
   const { data: dups } = await supabase.rpc("exam_find_duplicates", { p_sha256: sha });
   if (dups?.length && !allowDuplicate) return fail("This exact file has already been uploaded.");
 
   const name = clean(String(filename || "notice.pdf"), 160) || "notice.pdf";
-  const title = clean(name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " "), 200);
+  const title = clean(name.replace(/\.(pdf|jpe?g|png|webp)$/i, "").replace(/[_-]+/g, " "), 200);
   const { data: notice, error: nErr } = await supabase.from("exam_notices")
     .insert({ title: title.length >= 3 ? title : "Examination notice", audience_depts: depts, created_by: user.id })
     .select("id").single();
   if (nErr) return fail(message(nErr));
 
   const { data: doc, error: dErr } = await supabase.from("exam_documents")
-    .insert({ notice_id: notice.id, storage_path: path, original_filename: name, mime_type: "application/pdf", size_bytes: bytes.length, sha256: sha, page_count: sniff.pageCount, uploaded_by: user.id })
+    .insert({ notice_id: notice.id, storage_path: path, original_filename: name, mime_type: sniff.mime, size_bytes: bytes.length, sha256: sha, page_count: sniff.pageCount, uploaded_by: user.id })
     .select("id").single();
   if (dErr) { await supabase.from("exam_notices").delete().eq("id", notice.id); return fail(message(dErr)); }
 

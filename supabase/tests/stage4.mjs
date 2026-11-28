@@ -46,11 +46,11 @@ await run("Stage 4: community modules", async (t) => {
   t.check("removing hides the post from everyone", (await t.as(b, "select 1 from public.connect_posts")).rows.length === 0);
 
   // --- notes ---
-  const note = await t.as(a, `insert into public.notes (title, subject, semester, file, sha256) values ('DS unit 1', 'Data Structures', 3, '{"name":"ds.pdf","path":"x/ds.pdf"}', 'aaa111') returning id`);
+  const note = await t.as(a, `insert into public.notes (title, subject, semester, file, sha256) values ('DS unit 1', 'Data Structures', 3, jsonb_build_object('name', 'ds.pdf', 'path', $1::text), 'aaa111') returning id`, [`${a}/ds.pdf`]);
   t.check("student can upload notes (pending)", !note.error, note.error);
   t.check("pending notes are hidden from others", (await t.as(b, "select 1 from public.notes")).rows.length === 0);
   t.check("uploader sees their own pending note", (await t.as(a, "select 1 from public.notes")).rows.length === 1);
-  t.check("duplicate file is rejected", !!(await t.as(b, `insert into public.notes (title, subject, semester, file, sha256) values ('Same file', 'DS', 3, '{"name":"c.pdf","path":"y/c.pdf"}', 'aaa111')`)).error);
+  t.check("duplicate file is rejected", !!(await t.as(b, `insert into public.notes (title, subject, semester, file, sha256) values ('Same file', 'DS', 3, jsonb_build_object('name', 'c.pdf', 'path', $1::text), 'aaa111')`, [`${b}/c.pdf`])).error);
   t.check("student cannot approve their own note", !!(await t.as(a, "select public.review_note($1, true)", [note.rows[0].id])).error);
   await t.as(admin, "select public.review_note($1, true)", [note.rows[0].id]);
   t.check("approved notes are visible to other students", (await t.as(b, "select 1 from public.notes")).rows.length === 1);

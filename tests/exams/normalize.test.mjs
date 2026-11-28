@@ -315,3 +315,28 @@ test("an answer like 'Name (CODE)' is matched, but only when the name or code is
   assert.equal(m("Something Else (ECE)"), "Electronics & Communication Engineering");
   assert.equal(m("Physics (PHY)"), null);
 });
+
+test("'Special Examination' is never taken from the AI's label alone", () => {
+  const raw = goodRaw({
+    title: F("Mandatory Coding Practice and Placement Assessments", "explicit", 0.95, [1], "Subject: Mandatory Coding Practice"),
+    originalExamName: F("Placement Assessments", "explicit", 0.9, [1], "Placement Assessments"),
+    category: F("special", "explicit", 0.9, [1], "Placement Assessments"),
+  });
+  raw.timetable = [];
+  const norm = normalizeExtraction(raw, { departments: DEPTS, filename: "circular.jpg", pageCount: 1 });
+  assert.equal(norm.ok, true);
+  assert.equal(norm.result.categoryCode, null);
+  assert.ok(norm.warnings.some((w) => w.code === "special_no_evidence"));
+  assert.ok(norm.warnings.some((w) => w.code === "requires_review"));
+  assert.equal(norm.fieldMeta.category.needsReview, true);
+});
+
+test("a notice that really is supplementary is still Special, from its own wording", () => {
+  const raw = goodRaw();
+  raw.notice.title = F("Supplementary Examination Time Table", "explicit", 0.95, [1], "Supplementary Examination");
+  raw.notice.originalExaminationName = F("Supplementary Examination", "explicit", 0.95, [1], "Supplementary Examination");
+  raw.notice.category = F("special", "explicit", 0.9, [1], "Supplementary");
+  const norm = normalizeExtraction(raw, { departments: DEPTS, filename: "n.pdf", pageCount: 1 });
+  assert.equal(norm.result.categoryCode, "special");
+  assert.equal(norm.result.specialKind, "supplementary");
+});

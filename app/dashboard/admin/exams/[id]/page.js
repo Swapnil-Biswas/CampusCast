@@ -16,7 +16,7 @@ export default async function ReviewNotice({ params }) {
 
   const [{ data: notice }, { data: docs }, { data: entries }, { data: approvals }, departments] = await Promise.all([
     supabase.from("exam_notices").select("*").eq("id", id).maybeSingle(),
-    supabase.from("exam_documents").select("id, original_filename, storage_path, page_count, size_bytes, created_at, deleted_at, extractions:exam_extractions(id, status, error, attempt, created_at, field_meta, result, ocr_used)").eq("notice_id", id).order("created_at"),
+    supabase.from("exam_documents").select("id, original_filename, storage_path, mime_type, page_count, size_bytes, created_at, deleted_at, extractions:exam_extractions(id, status, error, attempt, created_at, field_meta, result, ocr_used)").eq("notice_id", id).order("created_at"),
     supabase.from("exam_timetable_entries").select("*").eq("notice_id", id).order("sort").order("exam_date").order("start_time"),
     supabase.from("exam_approvals").select("id, action, from_status, to_status, reason, created_at, actor").eq("notice_id", id).order("created_at", { ascending: false }),
     manageableDepartments(supabase, user.id, isSuper),
@@ -50,7 +50,7 @@ export default async function ReviewNotice({ params }) {
         notice={notice}
         entries={entries || []}
         departments={departments}
-        pdf={doc && { url: pdfUrl, filename: doc.original_filename, pages: doc.page_count, removed: Boolean(doc.deleted_at) }}
+        pdf={doc && { url: pdfUrl, filename: doc.original_filename, pages: doc.page_count, mime: doc.mime_type, removed: Boolean(doc.deleted_at) }}
         extraction={latest && { status: latest.status, error: latest.error, ocr: latest.ocr_used, fieldMeta: latest.field_meta || {}, warnings: notice.details?.extraction?.warnings || [] }}
         history={(approvals || []).map((a) => ({ id: a.id, action: a.action, to: a.to_status, reason: a.reason, at: a.created_at, by: names[a.actor] || "Admin" }))}
         canEdit={canEdit}
