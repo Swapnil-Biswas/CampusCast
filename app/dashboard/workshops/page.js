@@ -5,7 +5,7 @@ import { audienceLabel } from "../../../lib/dash/meta";
 import { fmtRange, formatRupees } from "../../../lib/hackathons/status";
 import { organiserLine } from "../../../lib/hackathons/organiser";
 import { workshopPhase } from "../../../lib/workshops/status";
-import RelTime from "../../../components/dashboard/RelTime";
+import Countdown from "../../../components/dashboard/Countdown";
 import { WorkshopButton } from "../../../components/dashboard/OfficialActions";
 import { Remind, Tabs } from "../../../components/dashboard/Bits";
 
@@ -30,7 +30,11 @@ export default async function Workshops({ searchParams }) {
   const upcoming = (w) => new Date(w.starts_at).getTime() > nowMs;
   // Drafts are listed on the "Post a workshop" page only.
   const data = (all || []).filter((w) => w.status !== "draft" && w.starts_at)
-    .filter((w) => tab === "past" ? !upcoming(w) : tab === "mine" ? mine.has(w.id) && upcoming(w) : upcoming(w));
+    // A workshop that is happening now stays in the current tabs, with its countdown, until it ends.
+    .filter((w) => {
+      const over = !upcoming(w) && workshopPhase(w, nowMs).key !== "live";
+      return tab === "past" ? over : !over && (tab !== "mine" || mine.has(w.id));
+    });
 
   return (
     <>
@@ -57,11 +61,11 @@ export default async function Workshops({ searchParams }) {
                 <div className="notice-top">
                   <span className="pill soft hk-phase" style={{ "--c": p.color }}>{p.label}</span>
                   {organizer && <span className="pill soft" style={{ "--c": w.club?.color || "#d9c8a8" }}>{organizer}</span>}
-                  {upcoming(w) && !cancelled && <span className="when"><RelTime date={w.starts_at} mode="until" /></span>}
                 </div>
                 <h3 className="notice-title"><Link href={href}>{w.title}</Link></h3>
                 {w.tagline && <p>{w.tagline}</p>}
                 <p className="audience">For {audienceLabel(w)}</p>
+                {p.target && <Countdown target={p.target.at} label={p.target.label} tone={p.key} compact />}
                 <ul className="hk-facts">
                   <li><CalendarClock size={16} /> <span>{fmtRange(w.starts_at, w.ends_at)}</span></li>
                   {w.venue && <li><MapPin size={16} /> <span>{w.venue}</span></li>}
